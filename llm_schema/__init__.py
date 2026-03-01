@@ -19,6 +19,29 @@ Quick start
     event.validate()
     print(event.to_json())
 
+PII redaction (v0.2+)
+---------------------
+::
+
+    from llm_schema import Event, EventType
+    from llm_schema.redact import Redactable, RedactionPolicy, Sensitivity
+
+    policy = RedactionPolicy(min_sensitivity=Sensitivity.PII, redacted_by="policy:corp")
+    event = Event(
+        event_type=EventType.PROMPT_SAVED,
+        source="promptlock@1.0.0",
+        payload={"author": Redactable("alice@example.com", Sensitivity.PII, {"email"})},
+    )
+    result = policy.apply(event)
+
+Pydantic models (optional, requires pydantic>=2.7)
+--------------------------------------------------
+::
+
+    from llm_schema.models import EventModel
+    model = EventModel.from_event(event)
+    print(model.model_json_schema())
+
 Public API
 ----------
 The following names are the stable, supported public interface.
@@ -40,11 +63,20 @@ The following names are the stable, supported public interface.
 * :class:`~llm_schema.exceptions.SerializationError`
 * :class:`~llm_schema.exceptions.DeserializationError`
 * :class:`~llm_schema.exceptions.EventTypeError`
+* :class:`~llm_schema.redact.Sensitivity`
+* :class:`~llm_schema.redact.Redactable`
+* :class:`~llm_schema.redact.RedactionPolicy`
+* :class:`~llm_schema.redact.RedactionResult`
+* :class:`~llm_schema.redact.PIINotRedactedError`
+* :func:`~llm_schema.redact.contains_pii`
+* :func:`~llm_schema.redact.assert_redacted`
 
 Version history
 ---------------
 v0.1 — Core ``Event``, ``EventType``, ULID, JSON serialisation, validation.
         Zero external dependencies.
+v0.2 — PII redaction framework (``Redactable``, ``RedactionPolicy``,
+        ``Sensitivity``).  Pydantic v2 model layer (``llm_schema.models``).
 """
 
 from llm_schema.event import SCHEMA_VERSION, Event, Tags
@@ -55,6 +87,16 @@ from llm_schema.exceptions import (
     SchemaValidationError,
     SerializationError,
     ULIDError,
+)
+from llm_schema.redact import (
+    PIINotRedactedError,
+    PII_TYPES,
+    Redactable,
+    RedactionPolicy,
+    RedactionResult,
+    Sensitivity,
+    assert_redacted,
+    contains_pii,
 )
 from llm_schema.types import (
     EventType,
@@ -67,7 +109,7 @@ from llm_schema.ulid import extract_timestamp_ms
 from llm_schema.ulid import generate as generate_ulid
 from llm_schema.ulid import validate as validate_ulid
 
-__version__: str = "0.1.0"
+__version__: str = "0.2.0"
 __all__: list[str] = [
     # Core
     "Event",
@@ -83,6 +125,15 @@ __all__: list[str] = [
     "namespace_of",
     "validate_custom",
     "get_by_value",
+    # PII Redaction (v0.2)
+    "Sensitivity",
+    "Redactable",
+    "RedactionPolicy",
+    "RedactionResult",
+    "PIINotRedactedError",
+    "contains_pii",
+    "assert_redacted",
+    "PII_TYPES",
     # Exceptions
     "LLMSchemaError",
     "SchemaValidationError",
