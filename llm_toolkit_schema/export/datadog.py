@@ -33,16 +33,29 @@ Example::
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
 from llm_toolkit_schema.event import Event
 from llm_toolkit_schema.exceptions import ExportError
+from llm_toolkit_schema.export.otlp import _ts_to_unix_nano
 
 __all__ = ["DatadogExporter", "DatadogResourceAttributes"]
+
+
+def _validate_http_url(url: str, param_name: str = "url") -> None:
+    """Raise *ValueError* if *url* is not a valid ``http://`` or ``https://`` URL."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(
+            f"{param_name} must be a valid http:// or https:// URL; got {url!r}"
+        )
+
 
 # Default Datadog agent trace intake address.
 _DEFAULT_AGENT_URL = "http://localhost:8126"
@@ -155,6 +168,11 @@ class DatadogExporter:
     ) -> None:
         if not service:
             raise ValueError("service must be a non-empty string")
+        _validate_http_url(agent_url, "agent_url")
+        if not dd_site or "/" in dd_site or " " in dd_site or "." not in dd_site:
+            raise ValueError(
+                f"dd_site must be a valid hostname (e.g. 'datadoghq.com'); got {dd_site!r}"
+            )
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         self._service = service
@@ -181,17 +199,15 @@ class DatadogExporter:
         Returns:
             A Datadog APM span dict ready to POST to ``/v0.3/traces``.
         """
-        import time as _time
-
         trace_id_int = (
             int(event.trace_id, 16) & 0xFFFFFFFFFFFFFFFF
             if event.trace_id
-            else abs(hash(event.event_id)) & 0xFFFFFFFFFFFFFFFF
+            else int(hashlib.sha256(event.event_id.encode()).hexdigest()[:16], 16)
         )
         span_id_int = (
             int(event.span_id, 16) & 0xFFFFFFFFFFFFFFFF
             if event.span_id
-            else abs(hash(event.event_id + "_span")) & 0xFFFFFFFFFFFFFFFF
+            else int(hashlib.sha256((event.event_id + ":span").encode()).hexdigest()[:16], 16)
         )
         parent_id_int = (
             int(event.parent_span_id, 16) & 0xFFFFFFFFFFFFFFFF
@@ -199,9 +215,8 @@ class DatadogExporter:
             else 0
         )
 
-        # Convert ISO-8601 timestamp to nanoseconds (approximate — uses current time
-        # for start; real spans carry latency_ms in payload when available).
-        start_ns = int(_time.time() * 1e9)
+        # Convert event timestamp to nanoseconds for deterministic span start time.
+        start_ns = _ts_to_unix_nano(event.timestamp)
         duration_ns = int(event.payload.get("duration_ms", 0) * 1_000_000)
 
         meta: Dict[str, str] = {
@@ -262,9 +277,7 @@ class DatadogExporter:
             A list of Datadog v2 metric series dicts (may be empty if no
             matching numeric fields are found).
         """
-        import time as _time
-
-        ts = int(_time.time())
+        ts = _ts_to_unix_nano(event.timestamp) // 1_000_000_000
         tags = self._resource_attrs.to_tags() + [
             f"llm.event_type:{event.event_type}",
         ]

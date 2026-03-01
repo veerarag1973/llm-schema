@@ -15,7 +15,7 @@ TemplateValidationFailedPayload
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Collection, Dict, List, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -236,4 +236,160 @@ __all__: list[str] = [
     "TemplateRenderedPayload",
     "VariableMissingPayload",
     "TemplateValidationFailedPayload",
+    "TemplatePolicy",
 ]
+
+
+class TemplatePolicy:
+    """Runtime enforcement policy for prompt templates.
+
+    Provides helpers for validating required variables before rendering and
+    for validating the rendered output after rendering, producing the
+    appropriate :class:`VariableMissingPayload`,
+    :class:`TemplateRenderedPayload`, or
+    :class:`TemplateValidationFailedPayload`.
+
+    Parameters
+    ----------
+    template_id:
+        Unique identifier for the template this policy governs.
+    required_variables:
+        Ordered list of variable names that *must* be supplied for
+        rendering to succeed.
+    template_version:
+        Version string for the template, e.g. ``"1.0.0"`` (default).
+    output_validator:
+        Optional callable ``(rendered_output: str) -> Optional[str]``.
+        Return ``None`` if the rendered output is valid, or a non-empty
+        error message string if it is not.
+
+    Example::
+
+        policy = TemplatePolicy(
+            template_id="system-prompt-v3",
+            required_variables=["user_name", "context"],
+            output_validator=lambda s: None if len(s) < 4096 else "output too long",
+        )
+        missing = policy.validate_variables({"user_name": "Alice"})
+        if missing is not None:
+            # emit an event with missing.to_dict() and abort
+            ...
+        result = policy.validate_output(rendered_text)
+    """
+
+    def __init__(
+        self,
+        template_id: str,
+        required_variables: List[str],
+        *,
+        template_version: str = "1.0.0",
+        output_validator: Optional[Callable[[str], Optional[str]]] = None,
+    ) -> None:
+        if not template_id or not isinstance(template_id, str):
+            raise ValueError("TemplatePolicy.template_id must be a non-empty string")
+        if not isinstance(required_variables, list):
+            raise TypeError("TemplatePolicy.required_variables must be a list")
+        for v in required_variables:
+            if not isinstance(v, str):
+                raise TypeError("Each required variable name must be a string")
+        if output_validator is not None and not callable(output_validator):
+            raise TypeError("TemplatePolicy.output_validator must be callable or None")
+        self._template_id = template_id
+        self._required_variables: List[str] = list(required_variables)
+        self._template_version = template_version
+        self._output_validator = output_validator
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    @property
+    def template_id(self) -> str:
+        """Unique identifier for the governed template."""
+        return self._template_id
+
+    @property
+    def required_variables(self) -> List[str]:
+        """List of required variable names."""
+        return list(self._required_variables)
+
+    def validate_variables(
+        self,
+        provided: Collection[str],
+    ) -> Optional[VariableMissingPayload]:
+        """Check that all required variables are present in *provided*.
+
+        Parameters
+        ----------
+        provided:
+            Collection of variable names supplied for this render.
+
+        Returns
+        -------
+        ``None`` if all required variables are satisfied, or a
+        :class:`VariableMissingPayload` listing the absent names.
+        """
+        provided_set = frozenset(provided)
+        missing = [v for v in self._required_variables if v not in provided_set]
+        if not missing:
+            return None
+        return VariableMissingPayload(
+            template_id=self._template_id,
+            missing_variables=missing,
+            required_variables=list(self._required_variables),
+        )
+
+    def validate_output(
+        self,
+        rendered_output: str,
+        *,
+        variable_count: Optional[int] = None,
+        render_duration_ms: Optional[float] = None,
+    ) -> Union[TemplateRenderedPayload, TemplateValidationFailedPayload]:
+        """Validate the rendered output string.
+
+        Runs the configured *output_validator* if one was supplied.  If no
+        validator is configured the output is considered valid.
+
+        Parameters
+        ----------
+        rendered_output:
+            The string produced after variable substitution.
+        variable_count:
+            Number of variables substituted (used in the success payload;
+            defaults to the number of declared required variables).
+        render_duration_ms:
+            Optional wall-clock render time for the success payload.
+
+        Returns
+        -------
+        :class:`TemplateRenderedPayload` on success, or
+        :class:`TemplateValidationFailedPayload` on failure.
+        """
+        if self._output_validator is not None:
+            error = self._output_validator(rendered_output)
+            if error:
+                return TemplateValidationFailedPayload(
+                    template_id=self._template_id,
+                    validation_errors=[error],
+                    validator="TemplatePolicy",
+                )
+        return TemplateRenderedPayload(
+            template_id=self._template_id,
+            template_version=self._template_version,
+            variable_count=(
+                variable_count
+                if variable_count is not None
+                else len(self._required_variables)
+            ),
+            render_duration_ms=render_duration_ms,
+            output_length=len(rendered_output),
+        )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"TemplatePolicy(template_id={self._template_id!r}, "
+            f"required_variables={self._required_variables!r}, "
+            f"template_version={self._template_version!r})"
+        )
+

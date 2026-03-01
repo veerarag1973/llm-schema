@@ -262,7 +262,7 @@ class TestValidateEventStdlib:
 
     def test_valid_checksum_passes(self):
         doc = _minimal_event().to_dict()
-        doc["checksum"] = "a" * 64
+        doc["checksum"] = "sha256:" + "a" * 64
         _stdlib_validate(doc)
 
     # --- tags validation ---
@@ -368,8 +368,8 @@ class TestValidateSignedEvent:
         event = _minimal_event()
         doc = event.to_dict()
         # Simulate signing fields manually.
-        doc["checksum"] = "a" * 64
-        doc["signature"] = "b" * 64
+        doc["checksum"] = "sha256:" + "a" * 64
+        doc["signature"] = "hmac-sha256:" + "b" * 64
         from llm_toolkit_schema.ulid import generate as _gen
         doc["prev_id"] = _gen()
 

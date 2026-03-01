@@ -26,6 +26,7 @@ import hashlib
 import hmac
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -39,6 +40,15 @@ _SIGNATURE_HEADER = "X-llm-toolkit-schema-Signature"
 
 # Maximum retry sleep (seconds) — hard ceiling regardless of attempt count.
 _MAX_SLEEP: float = 30.0
+
+
+def _validate_http_url(url: str, param_name: str = "url") -> None:
+    """Raise *ValueError* if *url* is not a valid ``http://`` or ``https://`` URL."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(
+            f"{param_name} must be a valid http:// or https:// URL; got {url!r}"
+        )
 
 
 def _sign_body(body: bytes, secret: str) -> str:
@@ -99,6 +109,7 @@ class WebhookExporter:
     ) -> None:
         if not url:
             raise ValueError("url must be a non-empty string")
+        _validate_http_url(url, "url")
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         if max_retries < 0:

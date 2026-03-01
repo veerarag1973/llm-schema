@@ -12,7 +12,7 @@ GuardFlaggedPayload
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -172,4 +172,121 @@ class GuardFlaggedPayload:
 __all__: list[str] = [
     "GuardBlockedPayload",
     "GuardFlaggedPayload",
+    "GuardPolicy",
 ]
+
+
+class GuardPolicy:
+    """Runtime enforcement policy for content guardrails.
+
+    Wraps user-supplied checker callables and produces the appropriate
+    :class:`GuardBlockedPayload` or :class:`GuardFlaggedPayload` — or
+    ``None`` when no violation is detected.
+
+    Parameters
+    ----------
+    input_checker:
+        Callable ``(input_hash: str) -> Optional[GuardBlockedPayload]``.
+        Return a :class:`GuardBlockedPayload` to block the input, or
+        ``None`` to allow it.
+    output_checker:
+        Callable ``(output_hash: str) -> Optional[GuardFlaggedPayload]``.
+        Return a :class:`GuardFlaggedPayload` to flag the output, or
+        ``None`` to pass it.
+    fail_closed:
+        When ``True`` and a checker is *not* configured for a direction,
+        every input/output is blocked/flagged with a default violation
+        payload.  Default ``False`` (fail-open — unconfigured checkers
+        allow everything).
+
+    Example::
+
+        def my_input_check(h: str) -> Optional[GuardBlockedPayload]:
+            if h in blocklist:
+                return GuardBlockedPayload(
+                    policy_id="p1", policy_name="blocklist",
+                    input_hash=h, violation_types=["blocked_content"]
+                )
+            return None
+
+        policy = GuardPolicy(input_checker=my_input_check)
+        result = policy.check_input(sha256_hex)
+        if result is not None:
+            # input was blocked
+            ...
+    """
+
+    def __init__(
+        self,
+        *,
+        input_checker: Optional[Callable[[str], Optional[GuardBlockedPayload]]] = None,
+        output_checker: Optional[Callable[[str], Optional[GuardFlaggedPayload]]] = None,
+        fail_closed: bool = False,
+    ) -> None:
+        self._input_checker = input_checker
+        self._output_checker = output_checker
+        self._fail_closed = fail_closed
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def check_input(self, input_hash: str) -> Optional[GuardBlockedPayload]:
+        """Run the input checker against *input_hash*.
+
+        Parameters
+        ----------
+        input_hash:
+            SHA-256 hex digest (or equivalent fingerprint) of the input
+            to inspect.
+
+        Returns
+        -------
+        :class:`GuardBlockedPayload` if the input should be blocked,
+        ``None`` if it is permitted.
+        """
+        if self._input_checker is not None:
+            return self._input_checker(input_hash)
+        if self._fail_closed:
+            return GuardBlockedPayload(
+                policy_id="guard-policy",
+                policy_name="GuardPolicy (fail-closed)",
+                input_hash=input_hash,
+                violation_types=["no_checker_configured"],
+                severity="high",
+            )
+        return None
+
+    def check_output(self, output_hash: str) -> Optional[GuardFlaggedPayload]:
+        """Run the output checker against *output_hash*.
+
+        Parameters
+        ----------
+        output_hash:
+            SHA-256 hex digest (or equivalent fingerprint) of the output
+            to inspect.
+
+        Returns
+        -------
+        :class:`GuardFlaggedPayload` if the output should be flagged,
+        ``None`` if it passes.
+        """
+        if self._output_checker is not None:
+            return self._output_checker(output_hash)
+        if self._fail_closed:
+            return GuardFlaggedPayload(
+                policy_id="guard-policy",
+                policy_name="GuardPolicy (fail-closed)",
+                output_hash=output_hash,
+                flag_types=["no_checker_configured"],
+                severity="medium",
+            )
+        return None
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"GuardPolicy(input_checker={self._input_checker!r}, "
+            f"output_checker={self._output_checker!r}, "
+            f"fail_closed={self._fail_closed!r})"
+        )
+

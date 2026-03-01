@@ -14,7 +14,7 @@
   <a href="https://pypi.org/project/llm-toolkit-schema/"><img src="https://img.shields.io/pypi/pyversions/llm-toolkit-schema?color=4c8cbf&logo=python&logoColor=white" alt="Python versions"/></a>
   <a href="https://pypi.org/project/llm-toolkit-schema/"><img src="https://img.shields.io/pypi/dm/llm-toolkit-schema?color=4c8cbf&label=downloads" alt="Monthly downloads"/></a>
   <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="100% test coverage"/>
-  <img src="https://img.shields.io/badge/tests-1214%20passing-brightgreen" alt="1214 tests"/>
+  <img src="https://img.shields.io/badge/tests-1302%20passing-brightgreen" alt="1302 tests"/>
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependencies"/>
   <a href="docs/index.md"><img src="https://img.shields.io/badge/docs-local-4c8cbf" alt="Documentation"/></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"/>
@@ -334,7 +334,7 @@ event = Event(
 
 ## Quality standards
 
-- **1 214 tests** — unit, integration, property-based (Hypothesis), and performance benchmarks
+- **1 302 tests** — unit, integration, property-based (Hypothesis), and performance benchmarks
 - **100 % line and branch coverage** — no dead code ships
 - **Zero required dependencies** — the entire core runs on Python's standard library alone
 - **Typed** — full `py.typed` marker; works with mypy and pyright out of the box
@@ -387,7 +387,7 @@ python -m venv .venv
 # source .venv/bin/activate     # macOS / Linux
 
 pip install -e ".[dev]"
-pytest                          # run all 1 214 tests
+pytest                          # run all 1 302 tests
 ```
 
 <details>

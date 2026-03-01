@@ -99,6 +99,33 @@ class TestToDdSpan:
         span = exporter.to_dd_span(sample_event)
         assert span["meta"]["llm.org_id"] == "org_test"
 
+    def test_span_no_org_id_absent_from_meta(self, exporter: DatadogExporter) -> None:
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x"},
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+        )
+        span = exporter.to_dd_span(event)
+        assert "llm.org_id" not in span["meta"]
+
+    def test_span_optional_fields_in_meta(self, exporter: DatadogExporter) -> None:
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x"},
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+            team_id="team-alpha",
+            actor_id="user-42",
+            session_id="sess-001",
+        )
+        span = exporter.to_dd_span(event)
+        assert span["meta"]["llm.team_id"] == "team-alpha"
+        assert span["meta"]["llm.actor_id"] == "user-42"
+        assert span["meta"]["llm.session_id"] == "sess-001"
+
     def test_span_env_resource(self, exporter: DatadogExporter, sample_event: Event) -> None:
         span = exporter.to_dd_span(sample_event)
         # service tag is embedded into resource_attrs and appears in metrics, not the span meta.
@@ -228,3 +255,138 @@ class TestRepr:
         r = repr(exporter)
         assert "DatadogExporter" in r
         assert "my-llm" in r
+
+
+# ---------------------------------------------------------------------------
+# Trace-span path (event with trace_id triggers _send_traces)
+# ---------------------------------------------------------------------------
+
+
+class TestTraceSpanExport:
+    def test_export_event_with_trace_id(self, exporter: DatadogExporter) -> None:
+        """An event with trace_id causes trace spans to be sent."""
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x", "cost_usd": 0.01},
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+            trace_id="a" * 32,
+            span_id="b" * 16,
+        )
+
+        def _mock_urlopen(req: Any, timeout: Any = None) -> Any:
+            mock_resp = MagicMock()
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_resp.read.return_value = b""
+            return mock_resp
+
+        with patch("llm_toolkit_schema.export.datadog.urllib.request.urlopen", _mock_urlopen):
+            async def _run() -> None:
+                await exporter.export(event)
+
+            asyncio.run(_run())
+
+    def test_export_trace_only_no_metric_fields(self, exporter: DatadogExporter) -> None:
+        """Event with trace_id but no metric fields: trace sent, no metrics path."""
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x", "status": "ok"},  # no _METRIC_FIELDS keys
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+            trace_id="c" * 32,
+            span_id="d" * 16,
+        )
+
+        def _mock_urlopen(req: Any, timeout: Any = None) -> Any:
+            mock_resp = MagicMock()
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_resp.read.return_value = b""
+            return mock_resp
+
+        with patch("llm_toolkit_schema.export.datadog.urllib.request.urlopen", _mock_urlopen):
+            async def _run() -> None:
+                await exporter.export(event)
+
+            asyncio.run(_run())
+
+    def test_export_no_trace_no_metrics_skips_tasks(self, exporter: DatadogExporter) -> None:
+        """Event with no trace_id and no metric fields: tasks list stays empty."""
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x", "status": "ok"},  # no trace_id, no metrics
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+        )
+
+        async def _run() -> None:
+            await exporter.export(event)
+
+        asyncio.run(_run())  # should not call urlopen at all
+
+    def test_metric_bool_value_skipped(self, exporter: DatadogExporter) -> None:
+        """Bool values in metric fields should be skipped (covers second continue)."""
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"cost_usd": True},  # in _METRIC_FIELDS but is bool → skip
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+        )
+        series = exporter.to_dd_metric_series(event)
+        assert series == []
+
+    def test_send_traces_http_error_raises_export_error(
+        self, exporter: DatadogExporter
+    ) -> None:
+        """_send_traces raises ExportError on HTTP error (covers except HTTPError)."""
+        import urllib.error
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x"},
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+            trace_id="e" * 32,
+            span_id="f" * 16,
+        )
+
+        def _fail(req: Any, timeout: Any = None) -> Any:
+            raise urllib.error.HTTPError(None, 502, "Bad Gateway", {}, None)
+
+        with patch("llm_toolkit_schema.export.datadog.urllib.request.urlopen", _fail):
+            async def _run() -> None:
+                await exporter.export(event)
+
+            with pytest.raises(ExportError, match="datadog"):
+                asyncio.run(_run())
+
+    def test_send_traces_os_error_raises_export_error(
+        self, exporter: DatadogExporter
+    ) -> None:
+        """_send_traces raises ExportError on OSError (covers except OSError)."""
+        event = Event(
+            event_type=EventType.TRACE_SPAN_COMPLETED,
+            source="test",
+            payload={"span_name": "x"},
+            event_id=gen_ulid(),
+            timestamp=FIXED_TIMESTAMP,
+            trace_id="a" * 32,
+            span_id="b" * 16,
+        )
+
+        def _fail(req: Any, timeout: Any = None) -> Any:
+            raise OSError("connection refused to agent")
+
+        with patch("llm_toolkit_schema.export.datadog.urllib.request.urlopen", _fail):
+            async def _run() -> None:
+                await exporter.export(event)
+
+            with pytest.raises(ExportError, match="datadog"):
+                asyncio.run(_run())
+
+

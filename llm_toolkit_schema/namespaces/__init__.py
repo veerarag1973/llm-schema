@@ -23,9 +23,10 @@ eval\\_
     :class:`EvalScenarioPayload`, :class:`EvalRegressionPayload`
 fence
     :class:`ValidationPassedPayload`, :class:`FenceValidationFailedPayload`,
-    :class:`RetryTriggeredPayload`
+    :class:`RetryTriggeredPayload`, :class:`FencePolicy`
 guard
-    :class:`GuardBlockedPayload`, :class:`GuardFlaggedPayload`
+    :class:`GuardBlockedPayload`, :class:`GuardFlaggedPayload`,
+    :class:`GuardPolicy`
 prompt
     :class:`PromptSavedPayload`, :class:`PromptPromotedPayload`,
     :class:`PromptApprovedPayload`, :class:`PromptRolledBackPayload`
@@ -34,7 +35,7 @@ redact
     :class:`ScanCompletedPayload`
 template
     :class:`TemplateRenderedPayload`, :class:`VariableMissingPayload`,
-    :class:`TemplateValidationFailedPayload`
+    :class:`TemplateValidationFailedPayload`, :class:`TemplatePolicy`
 trace
     :class:`TokenUsage`, :class:`ModelInfo`, :class:`ToolCall`,
     :class:`SpanCompletedPayload` (**FROZEN v1**)
@@ -45,11 +46,12 @@ from llm_toolkit_schema.namespaces.cost import BudgetThresholdPayload, CostRecor
 from llm_toolkit_schema.namespaces.diff import DiffComparisonPayload, DiffReportPayload
 from llm_toolkit_schema.namespaces.eval_ import EvalRegressionPayload, EvalScenarioPayload
 from llm_toolkit_schema.namespaces.fence import (
+    FencePolicy,
     FenceValidationFailedPayload,
     RetryTriggeredPayload,
     ValidationPassedPayload,
 )
-from llm_toolkit_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload
+from llm_toolkit_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload, GuardPolicy
 from llm_toolkit_schema.namespaces.prompt import (
     PromptApprovedPayload,
     PromptPromotedPayload,
@@ -58,6 +60,7 @@ from llm_toolkit_schema.namespaces.prompt import (
 )
 from llm_toolkit_schema.namespaces.redact import PIIDetectedPayload, PIIRedactedPayload, ScanCompletedPayload
 from llm_toolkit_schema.namespaces.template import (
+    TemplatePolicy,
     TemplateRenderedPayload,
     TemplateValidationFailedPayload,
     VariableMissingPayload,
@@ -82,9 +85,11 @@ __all__: list[str] = [
     "ValidationPassedPayload",
     "FenceValidationFailedPayload",
     "RetryTriggeredPayload",
+    "FencePolicy",
     # guard
     "GuardBlockedPayload",
     "GuardFlaggedPayload",
+    "GuardPolicy",
     # prompt
     "PromptSavedPayload",
     "PromptPromotedPayload",
@@ -98,6 +103,7 @@ __all__: list[str] = [
     "TemplateRenderedPayload",
     "VariableMissingPayload",
     "TemplateValidationFailedPayload",
+    "TemplatePolicy",
     # trace (FROZEN v1)
     "TokenUsage",
     "ModelInfo",

@@ -120,6 +120,10 @@ class TestWebhookExporterInit:
         exp = WebhookExporter("http://example.com", max_retries=0)
         assert exp._max_retries == 0
 
+    def test_invalid_scheme_url_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            WebhookExporter("ftp://invalid-scheme.example.com")
+
     def test_defaults(self) -> None:
         exp = WebhookExporter("http://example.com")
         assert exp._timeout == 10.0

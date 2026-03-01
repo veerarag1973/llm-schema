@@ -2,6 +2,8 @@
 
 Covers:
 - MigrationResult dataclass (creation, field access, immutability)
+- DeprecationRecord.summary() with and without replacement
+- v2_migration_roadmap() returns a sorted list
 - v1_to_v2() raises NotImplementedError (scaffold behaviour)
 """
 
@@ -9,7 +11,13 @@ from __future__ import annotations
 
 import pytest
 
-from llm_toolkit_schema.migrate import MigrationResult, v1_to_v2
+from llm_toolkit_schema.migrate import (
+    DeprecationRecord,
+    MigrationResult,
+    SunsetPolicy,
+    v1_to_v2,
+    v2_migration_roadmap,
+)
 from llm_toolkit_schema import Event, EventType
 
 
@@ -89,3 +97,65 @@ class TestV1ToV2:
         )
         with pytest.raises(NotImplementedError, match="v1_to_v2"):
             v1_to_v2(evt)
+
+
+# ---------------------------------------------------------------------------
+# DeprecationRecord.summary()
+# ---------------------------------------------------------------------------
+
+
+class TestDeprecationRecordSummary:
+    def test_summary_with_replacement(self) -> None:
+        rec = DeprecationRecord(
+            event_type="llm.trace.span.started",
+            since="1.1",
+            sunset="2.0",
+            replacement="llm.trace.span.span_started",
+        )
+        result = rec.summary()
+        assert "llm.trace.span.started" in result
+        assert "llm.trace.span.span_started" in result
+        assert "[1.1→2.0]" in result
+        assert "→" in result
+
+    def test_summary_without_replacement(self) -> None:
+        rec = DeprecationRecord(
+            event_type="llm.old.event",
+            since="1.0",
+            sunset="2.0",
+            replacement=None,
+        )
+        result = rec.summary()
+        assert "llm.old.event" in result
+        assert "(removed)" in result
+        assert "[1.0→2.0]" in result
+
+
+# ---------------------------------------------------------------------------
+# v2_migration_roadmap()
+# ---------------------------------------------------------------------------
+
+
+class TestV2MigrationRoadmap:
+    def test_returns_list_of_deprecation_records(self) -> None:
+        records = v2_migration_roadmap()
+        assert isinstance(records, list)
+        assert len(records) > 0
+        assert all(isinstance(r, DeprecationRecord) for r in records)
+
+    def test_sorted_by_event_type(self) -> None:
+        records = v2_migration_roadmap()
+        event_types = [r.event_type for r in records]
+        assert event_types == sorted(event_types)
+
+    def test_known_entries_present(self) -> None:
+        records = v2_migration_roadmap()
+        event_types = {r.event_type for r in records}
+        assert "llm.trace.span.started" in event_types
+        assert "llm.eval.score" in event_types
+        assert "llm.cache.hit" in event_types
+
+    def test_records_have_sunset_policy(self) -> None:
+        records = v2_migration_roadmap()
+        for rec in records:
+            assert isinstance(rec.sunset_policy, SunsetPolicy)

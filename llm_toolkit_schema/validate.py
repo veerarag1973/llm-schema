@@ -68,7 +68,9 @@ _TIMESTAMP_RE: re.Pattern[str] = re.compile(
 _SOURCE_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9\-]*@\d+\.\d+\.\d+$")
 _TRACE_ID_RE: re.Pattern[str] = re.compile(r"^[0-9a-f]{32}$")
 _SPAN_ID_RE: re.Pattern[str] = re.compile(r"^[0-9a-f]{16}$")
-_SHA256_RE: re.Pattern[str] = re.compile(r"^[0-9a-f]{64}$")
+# Checksum and signature carry distinct prefix indicators set by signing.py.
+_CHECKSUM_RE: re.Pattern[str] = re.compile(r"^sha256:[0-9a-f]{64}$")
+_SIGNATURE_RE: re.Pattern[str] = re.compile(r"^hmac-sha256:[0-9a-f]{64}$")
 
 # ---------------------------------------------------------------------------
 # Schema loader
@@ -191,9 +193,9 @@ def _stdlib_validate(doc: Dict[str, Any]) -> None:
     for ctx_field in ("org_id", "team_id", "actor_id", "session_id"):
         _check_string_field(doc, ctx_field, required=False, min_length=1)
 
-    # Optional integrity fields
-    for int_field in ("checksum", "signature"):
-        _check_string_field(doc, int_field, required=False, pattern=_SHA256_RE)
+    # Optional integrity fields — checksum and signature use distinct prefix patterns.
+    _check_string_field(doc, "checksum", required=False, pattern=_CHECKSUM_RE)
+    _check_string_field(doc, "signature", required=False, pattern=_SIGNATURE_RE)
     _check_string_field(doc, "prev_id", required=False, pattern=_ULID_RE)
 
     # tags

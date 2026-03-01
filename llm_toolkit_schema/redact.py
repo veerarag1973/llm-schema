@@ -54,6 +54,7 @@ Security guarantees
 from __future__ import annotations
 
 import datetime
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, FrozenSet, Optional
@@ -504,7 +505,7 @@ def _has_redactable(value: Any) -> bool:
     """Return True if *value* contains any Redactable instance (recursive)."""
     if isinstance(value, Redactable):
         return True
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return any(_has_redactable(v) for v in value.values())
     if isinstance(value, (list, tuple)):
         return any(_has_redactable(v) for v in value)
@@ -515,7 +516,7 @@ def _count_redactable(value: Any, _depth: int = 0) -> int:
     """Count the total number of Redactable instances in *value* (recursive)."""
     if isinstance(value, Redactable):
         return 1
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return sum(_count_redactable(v, _depth + 1) for v in value.values())
     if isinstance(value, (list, tuple)):
         return sum(_count_redactable(v, _depth + 1) for v in value)

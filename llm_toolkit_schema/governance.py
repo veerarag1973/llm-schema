@@ -91,10 +91,10 @@ class EventGovernancePolicy:
         custom_rules:       List of callables ``(event) -> Optional[str]``.
                             If a callable returns a non-empty string, the event
                             is blocked with that string as the reason.
-        strict_unknown:     When ``True``, event types not in either
-                            ``blocked_types`` or ``warn_deprecated`` are
-                            **silently allowed** (default ``False`` keeps
-                            original allow-all behaviour).
+        strict_unknown:     When ``True``, event types absent from the
+                            schema registry are **blocked** and raise
+                            :exc:`GovernanceViolationError` (default ``False``
+                            keeps the original allow-all behaviour).
 
     Example::
 
@@ -145,6 +145,16 @@ class EventGovernancePolicy:
             reason = rule(event)
             if reason:
                 raise GovernanceViolationError(et, reason)
+
+        # 4. Strict unknown — block event types absent from the schema registry.
+        if self.strict_unknown:
+            from llm_toolkit_schema.types import is_registered  # noqa: PLC0415
+            if not is_registered(et):
+                raise GovernanceViolationError(
+                    et,
+                    f"Event type {et!r} is not registered in the schema registry "
+                    "(strict_unknown=True).",
+                )
 
     def add_blocked_type(self, event_type: str) -> None:
         """Add *event_type* to the blocked set at runtime.

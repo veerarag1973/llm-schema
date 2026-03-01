@@ -390,6 +390,10 @@ class TestOTLPExporterInit:
         assert exp._timeout == 5.0
         assert exp._batch_size == 500
 
+    def test_invalid_scheme_url_raises(self) -> None:
+        with pytest.raises(ValueError, match="endpoint"):
+            OTLPExporter("ftp://invalid-scheme.example.com")
+
     def test_custom_headers_copied(self) -> None:
         headers = {"Authorization": "Bearer token"}
         exp = OTLPExporter("http://localhost", headers=headers)

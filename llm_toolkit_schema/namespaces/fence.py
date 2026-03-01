@@ -13,7 +13,7 @@ RetryTriggeredPayload
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -238,4 +238,165 @@ __all__: list[str] = [
     "ValidationPassedPayload",
     "FenceValidationFailedPayload",
     "RetryTriggeredPayload",
+    "FencePolicy",
 ]
+
+
+class FencePolicy:
+    """Runtime enforcement policy for structured-output fences.
+
+    Wraps a user-supplied validator callable and provides a
+    :meth:`validate` method that returns the appropriate
+    :class:`ValidationPassedPayload` or :class:`FenceValidationFailedPayload`,
+    plus a :meth:`retry_sequence` helper that drives the full
+    generate-validate-retry loop.
+
+    Parameters
+    ----------
+    validator:
+        Callable ``(output: str) -> Union[ValidationPassedPayload,
+        FenceValidationFailedPayload]``.
+        Must return one of the two payload types; the policy uses the
+        return type to decide pass/fail.
+    max_retries:
+        Maximum number of *additional* attempts beyond the first
+        (default ``3``).
+
+    Example::
+
+        import json
+
+        def json_validator(output: str):
+            try:
+                json.loads(output)
+                return ValidationPassedPayload(validator_id="json", format_type="json")
+            except json.JSONDecodeError as exc:
+                return FenceValidationFailedPayload(
+                    validator_id="json", format_type="json",
+                    errors=[str(exc)], retryable=True,
+                )
+
+        policy = FencePolicy(validator=json_validator, max_retries=2)
+        result = policy.validate(llm_output)
+    """
+
+    def __init__(
+        self,
+        validator: "Callable[[str], Union[ValidationPassedPayload, FenceValidationFailedPayload]]",
+        *,
+        max_retries: int = 3,
+    ) -> None:
+        if not callable(validator):
+            raise TypeError("FencePolicy.validator must be callable")
+        if not isinstance(max_retries, int) or max_retries < 0:
+            raise ValueError("FencePolicy.max_retries must be a non-negative int")
+        self._validator = validator
+        self._max_retries = max_retries
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    @property
+    def max_retries(self) -> int:
+        """Configured maximum number of retries."""
+        return self._max_retries
+
+    def validate(
+        self,
+        output: str,
+        *,
+        attempt: int = 1,
+    ) -> "Union[ValidationPassedPayload, FenceValidationFailedPayload]":
+        """Run the validator against *output* and return a payload.
+
+        If the validator returns a :class:`FenceValidationFailedPayload`
+        whose ``attempt`` field does not match *attempt*, a new payload is
+        created with the corrected ``attempt`` number so callers always
+        receive a consistent value.
+
+        Parameters
+        ----------
+        output:
+            The rendered LLM output string to validate.
+        attempt:
+            1-based attempt index (default ``1``).
+
+        Returns
+        -------
+        :class:`ValidationPassedPayload` on success,
+        :class:`FenceValidationFailedPayload` on failure.
+        """
+        result = self._validator(output)
+        # Normalise the attempt counter in the returned payload.
+        if isinstance(result, FenceValidationFailedPayload) and result.attempt != attempt:
+            result = FenceValidationFailedPayload(
+                validator_id=result.validator_id,
+                format_type=result.format_type,
+                errors=list(result.errors),
+                attempt=attempt,
+                retryable=result.retryable,
+            )
+        elif isinstance(result, ValidationPassedPayload) and result.attempt != attempt:
+            result = ValidationPassedPayload(
+                validator_id=result.validator_id,
+                format_type=result.format_type,
+                attempt=attempt,
+                duration_ms=result.duration_ms,
+            )
+        return result
+
+    def retry_sequence(
+        self,
+        output_fn: "Callable[[int], str]",
+    ) -> "tuple[Union[ValidationPassedPayload, FenceValidationFailedPayload], List[RetryTriggeredPayload]]":
+        """Drive a full generate-validate-retry loop.
+
+        Calls *output_fn* with the current 1-based attempt number to obtain
+        the LLM output, then validates it.  If validation fails and retries
+        remain, a :class:`RetryTriggeredPayload` is recorded and the loop
+        continues.
+
+        Parameters
+        ----------
+        output_fn:
+            Callable ``(attempt: int) -> str`` that produces LLM output for
+            the given attempt number.
+
+        Returns
+        -------
+        A tuple of ``(final_result, retry_events)`` where *final_result* is
+        the last :class:`ValidationPassedPayload` or
+        :class:`FenceValidationFailedPayload`, and *retry_events* is an
+        ordered list of :class:`RetryTriggeredPayload` objects (one per retry
+        triggered).
+        """
+        max_attempts = 1 + self._max_retries
+        retry_events: List[RetryTriggeredPayload] = []
+        result: Optional[Union[ValidationPassedPayload, FenceValidationFailedPayload]] = None
+
+        for attempt in range(1, max_attempts + 1):  # pragma: no branch
+            output = output_fn(attempt)
+            result = self.validate(output, attempt=attempt)
+
+            if isinstance(result, ValidationPassedPayload):
+                break
+
+            # Failed — trigger a retry if we have attempts left.
+            if attempt < max_attempts and result.retryable:
+                retry_events.append(
+                    RetryTriggeredPayload(
+                        validator_id=result.validator_id,
+                        attempt=attempt + 1,
+                        max_attempts=max_attempts,
+                        previous_error=result.errors[0] if result.errors else None,
+                    )
+                )
+            else:
+                break  # exhausted retries or not retryable
+
+        return result, retry_events  # type: ignore[return-value]
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"FencePolicy(validator={self._validator!r}, max_retries={self._max_retries!r})"
+

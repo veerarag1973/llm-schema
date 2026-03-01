@@ -278,3 +278,229 @@ class TestLLMSchemaEventHandler:
         # A completed event with None duration.
         ev = handler.events[0]
         assert ev.payload["duration_ms"] is None
+
+
+# ---------------------------------------------------------------------------
+# LangChain: additional coverage gaps
+# ---------------------------------------------------------------------------
+
+
+class TestLangChainAdditionalCoverage:
+    """Covers lines 45, 128, and 181->184 in langchain.py."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        _inject_fake_langchain()
+
+    def _make_handler(self, exporter: Any = None) -> Any:
+        from llm_toolkit_schema.integrations.langchain import LLMSchemaCallbackHandler
+
+        return LLMSchemaCallbackHandler(source="test-app", org_id="org-1", exporter=exporter)
+
+    def test_require_langchain_fallback_to_langchain_callbacks(self) -> None:
+        """Line 45: fallback when langchain_core unavailable, langchain.callbacks present."""
+        import types
+
+        # Stub a minimal langchain.callbacks module (not langchain_core).
+        fake_langchain = types.ModuleType("langchain")
+        fake_lc_callbacks = types.ModuleType("langchain.callbacks")
+        fake_langchain.callbacks = fake_lc_callbacks  # type: ignore[attr-defined]
+
+        with patch.dict(
+            sys.modules,
+            {
+                "langchain_core": None,
+                "langchain_core.callbacks": None,
+                "langchain": fake_langchain,
+                "langchain.callbacks": fake_lc_callbacks,
+            },
+        ):
+            from importlib import reload
+            import llm_toolkit_schema.integrations.langchain as lc_mod
+
+            result = lc_mod._require_langchain()
+            assert result is fake_lc_callbacks
+
+    def test_on_llm_start_with_running_event_loop(self) -> None:
+        """Line 128: loop.create_task called when invoked inside a running event loop."""
+        import asyncio
+
+        exported: list[Any] = []
+
+        class FakeExporter:
+            async def export(self, event: Any) -> None:
+                exported.append(event)
+
+        handler = self._make_handler(exporter=FakeExporter())
+        run_id = uuid.uuid4()
+
+        async def _run() -> None:
+            # Called inside asyncio.run → loop IS running → create_task fires.
+            handler.on_llm_start(
+                serialized={"id": ["x"]},
+                prompts=["hello"],
+                run_id=run_id,
+            )
+            # Allow the task to execute.
+            await asyncio.sleep(0)
+
+        asyncio.run(_run())
+        # The event was emitted and the export task was scheduled + ran.
+        assert len(handler.events) == 1
+        assert len(exported) == 1
+
+    def test_on_llm_end_llm_output_not_dict_takes_false_branch(self) -> None:
+        """Lines 181->184: False branch when llm_output is not a dict."""
+        handler = self._make_handler()
+        run_id = uuid.uuid4()
+
+        response = MagicMock()
+        response.llm_output = None  # has attribute but isinstance(..., dict) is False
+
+        handler.on_llm_end(response=response, run_id=run_id)
+        ev = handler.events[0]
+        assert ev.event_type == "llm.trace.span.completed"
+        # token fields default to None when llm_output is not a valid dict
+        assert ev.payload["prompt_tokens"] is None
+        assert ev.payload["completion_tokens"] is None
+
+    def test_on_llm_end_no_llm_output_attr(self) -> None:
+        """Lines 181->184: False branch when llm_output attribute absent."""
+        handler = self._make_handler()
+        run_id = uuid.uuid4()
+
+        # Plain object without llm_output attribute.
+        class _FakeResponse:
+            pass
+
+        handler.on_llm_end(response=_FakeResponse(), run_id=run_id)
+        ev = handler.events[0]
+        assert ev.event_type == "llm.trace.span.completed"
+        assert ev.payload["prompt_tokens"] is None
+
+
+# ---------------------------------------------------------------------------
+# LlamaIndex: additional coverage gaps
+# ---------------------------------------------------------------------------
+
+
+class TestLlamaIndexAdditionalCoverage:
+    """Covers lines 43, 116-119, 128, 212-213, 235->exit in llamaindex.py."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        _inject_fake_llamaindex()
+
+    def _make_handler(self, exporter: Any = None) -> Any:
+        from llm_toolkit_schema.integrations.llamaindex import LLMSchemaEventHandler
+
+        return LLMSchemaEventHandler(source="rag-app", org_id="org-2", exporter=exporter)
+
+    def test_require_llamaindex_fallback_to_legacy_callbacks(self) -> None:
+        """Line 43: fallback when llama_index.core.callbacks unavailable."""
+        import types
+
+        fake_llama = types.ModuleType("llama_index")
+        fake_callbacks = types.ModuleType("llama_index.callbacks")
+        fake_llama.callbacks = fake_callbacks  # type: ignore[attr-defined]
+
+        with patch.dict(
+            sys.modules,
+            {
+                "llama_index.core": None,
+                "llama_index.core.callbacks": None,
+                "llama_index": fake_llama,
+                "llama_index.callbacks": fake_callbacks,
+            },
+        ):
+            from importlib import reload
+            import llm_toolkit_schema.integrations.llamaindex as li_mod
+
+            result = li_mod._require_llamaindex()
+            assert result is fake_callbacks
+
+    def test_make_event_with_running_event_loop(self) -> None:
+        """Lines 116-119: loop.create_task called when loop is running."""
+        import asyncio
+
+        exported: list[Any] = []
+
+        class FakeExporter:
+            async def export(self, event: Any) -> None:
+                exported.append(event)
+
+        handler = self._make_handler(exporter=FakeExporter())
+
+        async def _run() -> None:
+            handler.on_event_start("LLM", payload={}, event_id="ev-loop")
+            await asyncio.sleep(0)
+
+        asyncio.run(_run())
+        assert len(handler.events) == 1
+        assert len(exported) == 1
+
+    def test_cb_event_type_str_enum_value(self) -> None:
+        """Line 128: _cb_event_type_str returns str(event_type.value) for enum-like objects."""
+        from llm_toolkit_schema.integrations.llamaindex import LLMSchemaEventHandler
+
+        class FakeEnum:
+            value = "LLM"
+
+        result = LLMSchemaEventHandler._cb_event_type_str(FakeEnum())
+        assert result == "LLM"
+
+    def test_on_event_end_llm_with_raw_token_usage(self) -> None:
+        """Lines 212-213: token_info populated when response.raw is a dict with usage."""
+        handler = self._make_handler()
+        handler.on_event_start("LLM", event_id="ev-tok")
+
+        response_mock = MagicMock()
+        response_mock.raw = {
+            "usage": {
+                "prompt_tokens": 7,
+                "completion_tokens": 3,
+                "total_tokens": 10,
+            }
+        }
+        handler.on_event_end("LLM", payload={"response": response_mock}, event_id="ev-tok")
+
+        completed = handler.events[1]
+        assert completed.event_type == "llm.trace.span.completed"
+        assert completed.payload["prompt_tokens"] == 7
+        assert completed.payload["completion_tokens"] == 3
+        assert completed.payload["total_tokens"] == 10
+
+    def test_on_event_end_unknown_type_no_event_emitted(self) -> None:
+        """Line 235->exit: on_event_end with none of the known types → no event."""
+        handler = self._make_handler()
+        handler.on_event_start("SOME_UNKNOWN", event_id="ev-unk")
+        handler.on_event_end("SOME_UNKNOWN", event_id="ev-unk")
+        # on_event_start for unknown type emits nothing; on_event_end also emits nothing.
+        assert len(handler.events) == 0
+
+    def test_make_event_with_exporter_loop_not_running(self) -> None:
+        """Lines 118->122: exporter present but loop.is_running() is False (sync call)."""
+        import asyncio
+
+        exported: list[Any] = []
+
+        class FakeExporter:
+            async def export(self, event: Any) -> None:  # pragma: no cover
+                exported.append(event)
+
+        handler = self._make_handler(exporter=FakeExporter())
+
+        # Create an explicit non-running event loop so get_event_loop() succeeds
+        # but loop.is_running() returns False → covers the False branch of line 118.
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            handler.on_event_start("LLM", payload={}, event_id="ev-sync")
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
+
+        # Event is emitted; export task was NOT scheduled (loop not running).
+        assert len(handler.events) == 1
+        assert len(exported) == 0
+

@@ -48,6 +48,10 @@ class TestConstruction:
         with pytest.raises(ValueError, match="url"):
             GrafanaLokiExporter(url="")
 
+    def test_invalid_scheme_url_raises(self) -> None:
+        with pytest.raises(ValueError, match="url"):
+            GrafanaLokiExporter(url="ftp://invalid-scheme.example.com")
+
     def test_zero_timeout_raises(self) -> None:
         with pytest.raises(ValueError, match="timeout"):
             GrafanaLokiExporter(url="http://x", timeout=0.0)

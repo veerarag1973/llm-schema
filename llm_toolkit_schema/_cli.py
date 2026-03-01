@@ -57,9 +57,10 @@ def _cmd_check_compat(args: argparse.Namespace) -> int:
         print("error: JSON file must contain a top-level array of events", file=sys.stderr)
         return 2
 
+    from llm_toolkit_schema.exceptions import DeserializationError, SchemaValidationError  # noqa: PLC0415
     try:
         events = [Event.from_dict(item) for item in raw]
-    except Exception as exc:
+    except (DeserializationError, SchemaValidationError, KeyError, TypeError) as exc:
         print(f"error: could not deserialise events: {exc}", file=sys.stderr)
         return 2
 

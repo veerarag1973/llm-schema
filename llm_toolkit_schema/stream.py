@@ -54,7 +54,7 @@ from typing import (
 
 from llm_toolkit_schema.event import Event
 
-__all__ = ["EventStream", "Exporter"]
+__all__ = ["EventStream", "Exporter", "iter_file", "aiter_file"]
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ class EventStream:
                 ``skip_errors=False`` (default).
             OSError: If the file cannot be opened.
         """
-        from llm_toolkit_schema.exceptions import DeserializationError  # lazy import
+        from llm_toolkit_schema.exceptions import DeserializationError, LLMSchemaError  # noqa: PLC0415
 
         events: List[Event] = []
         with open(str(path), encoding=encoding) as fh:
@@ -145,7 +145,7 @@ class EventStream:
                     continue
                 try:
                     events.append(Event.from_json(line))
-                except Exception as exc:
+                except (LLMSchemaError, ValueError) as exc:
                     if skip_errors:
                         continue
                     raise DeserializationError(
@@ -304,7 +304,7 @@ class EventStream:
                 'Install it with: pip install "llm-toolkit-schema[kafka]"'
             ) from exc
 
-        from llm_toolkit_schema.exceptions import DeserializationError  # lazy
+        from llm_toolkit_schema.exceptions import DeserializationError, LLMSchemaError  # noqa: PLC0415
 
         consumer: Any = KafkaConsumer(
             topic,
@@ -324,7 +324,7 @@ class EventStream:
                     break
                 try:
                     events.append(Event.from_json(value))
-                except Exception as exc:
+                except (LLMSchemaError, ValueError) as exc:
                     if skip_errors:
                         continue
                     raise DeserializationError(
@@ -453,3 +453,108 @@ class EventStream:
         if not isinstance(other, EventStream):
             return NotImplemented
         return self._events == other._events
+
+
+# ---------------------------------------------------------------------------
+# Module-level streaming generators (avoid full in-memory accumulation)
+# ---------------------------------------------------------------------------
+
+
+def iter_file(
+    path: Union[str, Path],
+    *,
+    encoding: str = "utf-8",
+    skip_errors: bool = False,
+) -> Iterator[Event]:
+    """Yield :class:`~llm_toolkit_schema.event.Event` objects one at a time
+    from a newline-delimited JSON file *without* loading the entire file into
+    memory.
+
+    Unlike :meth:`EventStream.from_file`, this function is a **generator**;
+    each event is parsed and yielded individually so that very large log files
+    can be processed with constant memory overhead.
+
+    Args:
+        path:         Path to the NDJSON file.
+        encoding:     File encoding (default ``"utf-8"``).
+        skip_errors:  When ``True``, lines that fail to parse are silently
+                      skipped instead of raising.
+
+    Yields:
+        Parsed :class:`~llm_toolkit_schema.event.Event` instances.
+
+    Raises:
+        DeserializationError: On the first malformed line when
+            ``skip_errors=False`` (default).
+
+    Example::
+
+        for event in iter_file("events.ndjson"):
+            process(event)
+    """
+    from llm_toolkit_schema.exceptions import DeserializationError, LLMSchemaError  # noqa: PLC0415
+
+    with open(path, encoding=encoding) as fh:
+        for lineno, raw in enumerate(fh, start=1):
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                yield Event.from_json(line)
+            except (LLMSchemaError, ValueError) as exc:
+                if skip_errors:
+                    continue
+                raise DeserializationError(
+                    reason=f"Line {lineno}: {exc}",
+                    source_hint=str(path),
+                ) from exc
+
+
+async def aiter_file(
+    path: Union[str, Path],
+    *,
+    encoding: str = "utf-8",
+    skip_errors: bool = False,
+) -> AsyncIterator[Event]:
+    """Async generator equivalent of :func:`iter_file`.
+
+    Reads a newline-delimited JSON file line-by-line using
+    :func:`asyncio.to_thread` to avoid blocking the event loop on I/O,
+    yielding one :class:`~llm_toolkit_schema.event.Event` at a time.
+
+    Args:
+        path:         Path to the NDJSON file.
+        encoding:     File encoding (default ``"utf-8"``).
+        skip_errors:  When ``True``, lines that fail to parse are silently
+                      skipped instead of raising.
+
+    Yields:
+        Parsed :class:`~llm_toolkit_schema.event.Event` instances.
+
+    Raises:
+        DeserializationError: On the first malformed line when
+            ``skip_errors=False`` (default).
+
+    Example::
+
+        async for event in aiter_file("events.ndjson"):
+            await process(event)
+    """
+    from llm_toolkit_schema.exceptions import DeserializationError, LLMSchemaError  # noqa: PLC0415
+
+    lines: List[str] = await asyncio.to_thread(
+        lambda: Path(path).read_text(encoding=encoding).splitlines()
+    )
+    for lineno, raw in enumerate(lines, start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            yield Event.from_json(line)
+        except (LLMSchemaError, ValueError) as exc:
+            if skip_errors:
+                continue
+            raise DeserializationError(
+                reason=f"Line {lineno}: {exc}",
+                source_hint=str(path),
+            ) from exc

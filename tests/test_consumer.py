@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 
 from llm_toolkit_schema.consumer import (
@@ -16,7 +18,7 @@ from llm_toolkit_schema.consumer import (
 
 
 @pytest.fixture(autouse=True)
-def _clear_global_registry() -> None:
+def _clear_global_registry() -> Generator[None, None, None]:
     """Reset the global registry before and after every test."""
     get_registry().clear()
     yield
@@ -102,6 +104,15 @@ class TestQuerying:
         record = registry.by_tool("tool-x")
         assert record is not None
         assert record.tool_name == "tool-x"
+
+    def test_by_tool_found_second_record(self) -> None:
+        """Loop must skip first record before finding the second (covers branch)."""
+        registry = ConsumerRegistry()
+        registry.register("tool-a", namespaces=["trace"], schema_version="1.0")
+        registry.register("tool-b", namespaces=["eval"], schema_version="1.0")
+        record = registry.by_tool("tool-b")
+        assert record is not None
+        assert record.tool_name == "tool-b"
 
     def test_by_tool_not_found(self) -> None:
         registry = ConsumerRegistry()

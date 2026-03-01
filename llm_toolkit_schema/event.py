@@ -37,7 +37,8 @@ import hashlib
 import json
 import re
 import sys
-from typing import Any, Dict, Final, List, Optional, Union
+from types import MappingProxyType
+from typing import Any, Dict, Final, List, Mapping, Optional, Union
 
 from llm_toolkit_schema.exceptions import (
     DeserializationError,
@@ -362,9 +363,9 @@ class Event:
         return self._source  # type: ignore[return-value]
 
     @property
-    def payload(self) -> Dict[str, Any]:
-        """Tool-specific event payload."""
-        return self._payload  # type: ignore[return-value]
+    def payload(self) -> Mapping[str, Any]:
+        """Tool-specific event payload (read-only view — mutating in place is prevented)."""
+        return MappingProxyType(self._payload)  # type: ignore[return-value]
 
     @property
     def trace_id(self) -> Optional[str]:

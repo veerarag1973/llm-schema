@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -40,6 +41,15 @@ from llm_toolkit_schema.exceptions import ExportError
 __all__ = ["GrafanaLokiExporter"]
 
 _PUSH_PATH = "/loki/api/v1/push"
+
+
+def _validate_http_url(url: str, param_name: str = "url") -> None:
+    """Raise *ValueError* if *url* is not a valid ``http://`` or ``https://`` URL."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(
+            f"{param_name} must be a valid http:// or https:// URL; got {url!r}"
+        )
 
 
 class GrafanaLokiExporter:
@@ -85,6 +95,7 @@ class GrafanaLokiExporter:
     ) -> None:
         if not url:
             raise ValueError("url must be a non-empty string")
+        _validate_http_url(url, "url")
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         self._base_url = url.rstrip("/")
@@ -228,7 +239,7 @@ class GrafanaLokiExporter:
         normalised = timestamp.replace("Z", "+00:00")
         if sys.version_info >= (3, 11):  # pragma: no cover
             dt = datetime.fromisoformat(normalised)
-        else:
+        else:  # pragma: no cover
             try:
                 dt = datetime.strptime(normalised, "%Y-%m-%dT%H:%M:%S.%f+00:00")
             except ValueError:

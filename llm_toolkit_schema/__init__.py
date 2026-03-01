@@ -107,6 +107,13 @@ The following names are the stable, supported public interface.
   docs for :class:`~llm_toolkit_schema.namespaces.trace.SpanCompletedPayload`
   (**FROZEN v1**), :class:`~llm_toolkit_schema.namespaces.cost.CostRecordedPayload`,
   :class:`~llm_toolkit_schema.namespaces.eval_.EvalScenarioPayload`, and all others.
+* Runtime enforcement policies (v1.1.1):
+  :class:`~llm_toolkit_schema.namespaces.guard.GuardPolicy`,
+  :class:`~llm_toolkit_schema.namespaces.fence.FencePolicy`,
+  :class:`~llm_toolkit_schema.namespaces.template.TemplatePolicy`
+* Streaming generators (v1.1.1):
+  :func:`~llm_toolkit_schema.stream.iter_file`,
+  :func:`~llm_toolkit_schema.stream.aiter_file`
 
 Version history
 ---------------
@@ -137,6 +144,21 @@ v1.1 — Enterprise integrations (Phase 7): Datadog APM exporter
         (Phase 8): LangChain and LlamaIndex callback adapters
         (``llm_toolkit_schema.integrations``).  v2 migration roadmap
         (Phase 9, ``v2_migration_roadmap``).
+v1.1.1 — Security & correctness patch: ``Event.payload`` now returns a
+        read-only ``MappingProxyType``; ``strict_unknown=True`` correctly
+        blocks unregistered event types; exception-handling narrowed in
+        ``_cli.py`` and ``stream.py``; checksum/signature regex patterns
+        aligned to ``signing.py`` (``sha256:`` / ``hmac-sha256:`` prefixes);
+        Datadog exporter uses deterministic SHA-256 IDs, ``event.timestamp``
+        for span start, and validates ``dd_site`` / ``agent_url``; OTLP
+        exporter respects ``batch_size`` chunking; URL scheme validation
+        added to all HTTP exporters; ``redact._has_redactable`` uses
+        ``Mapping`` ABC.  New runtime enforcement classes: ``GuardPolicy``
+        (``llm_toolkit_schema.namespaces.guard``), ``FencePolicy``
+        (``llm_toolkit_schema.namespaces.fence``), ``TemplatePolicy``
+        (``llm_toolkit_schema.namespaces.template``).  New streaming
+        generators ``iter_file()`` / ``aiter_file()`` in
+        ``llm_toolkit_schema.stream``.
 """
 
 from llm_toolkit_schema.event import SCHEMA_VERSION, Event, Tags
@@ -214,7 +236,7 @@ from llm_toolkit_schema.deprecations import (
     mark_deprecated,
     warn_if_deprecated,
 )
-from llm_toolkit_schema.stream import EventStream, Exporter
+from llm_toolkit_schema.stream import EventStream, Exporter, iter_file, aiter_file
 from llm_toolkit_schema.validate import validate_event
 from llm_toolkit_schema.compliance import (
     CompatibilityResult,
@@ -244,12 +266,14 @@ from llm_toolkit_schema.namespaces import (
     EvalRegressionPayload,
     EvalScenarioPayload,
     # fence
+    FencePolicy,
     FenceValidationFailedPayload,
     RetryTriggeredPayload,
     ValidationPassedPayload,
     # guard
     GuardBlockedPayload,
     GuardFlaggedPayload,
+    GuardPolicy,
     # prompt
     PromptApprovedPayload,
     PromptPromotedPayload,
@@ -260,6 +284,7 @@ from llm_toolkit_schema.namespaces import (
     PIIRedactedPayload,
     ScanCompletedPayload,
     # template
+    TemplatePolicy,
     TemplateRenderedPayload,
     TemplateValidationFailedPayload,
     VariableMissingPayload,
@@ -270,7 +295,7 @@ from llm_toolkit_schema.namespaces import (
     ToolCall,
 )
 
-__version__: str = "1.1.0"
+__version__: str = "1.1.1"
 __all__: list[str] = [
     # Core
     "Event",
@@ -403,6 +428,13 @@ __all__: list[str] = [
     "warn_if_deprecated",
     "list_deprecated",
     "get_deprecation_registry",
+    # Runtime policy enforcement (v1.1.1)
+    "GuardPolicy",
+    "FencePolicy",
+    "TemplatePolicy",
+    # Streaming generators (v1.1.1)
+    "iter_file",
+    "aiter_file",
     # Metadata
     "__version__",
 ]

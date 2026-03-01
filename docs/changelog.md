@@ -12,6 +12,56 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## 1.1.1 — 2026-03-15
+
+### Fixed
+
+- **`Event.payload`** now returns a read-only `MappingProxyType` — mutating
+  the returned object no longer silently corrupts event state.
+- **`EventGovernancePolicy(strict_unknown=True)`** now correctly raises
+  `GovernanceViolationError` for unregistered event types (was a no-op
+  previously); docstring corrected to match actual behaviour.
+- **`_cli.py`** — broad `except Exception` replaced with typed
+  `(DeserializationError, SchemaValidationError, KeyError, TypeError)`,
+  preventing silent swallowing of unexpected errors.
+- **`stream.py`** — broad `except Exception` in `EventStream.from_file` and
+  `EventStream.from_kafka` replaced with `(LLMSchemaError, ValueError)`.
+- **`validate.py`** — checksum regex tightened to `^sha256:[0-9a-f]{64}$`
+  and signature regex to `^hmac-sha256:[0-9a-f]{64}$`, aligning with the
+  prefixes actually produced by `signing.py` (bare 64-hex patterns accepted
+  invalid values).
+- **`export/datadog.py`**:
+  - Fallback span/trace IDs are now deterministic SHA-256 derivations of the
+    event ID instead of Python `hash()` (non-reproducible across processes).
+  - Span start timestamp uses `event.timestamp` rather than wall-clock time.
+  - `dd_site` is validated as a hostname (no scheme/path).
+  - `agent_url` is validated as an `http://` or `https://` URL.
+- **`export/otlp.py`** — `export_batch` now chunks the event list by
+  `batch_size` and issues one request per chunk; previously the parameter
+  was accepted but never applied.  URL scheme validated on construction.
+- **`export/webhook.py`** — URL scheme validated on construction (`http://`
+  or `https://` only).
+- **`export/grafana.py`** — URL scheme validated on construction.
+- **`redact.py`** — `_has_redactable` / `_count_redactable` use the
+  `collections.abc.Mapping` ABC instead of `dict`, so payloads built from
+  `MappingProxyType` or other mapping types are handled correctly.
+
+### Added
+
+- **`GuardPolicy`** (`llm_toolkit_schema.namespaces.guard`) — runtime
+  input/output guardrail enforcement with configurable fail-open / fail-closed
+  mode and callable checker injection.
+- **`FencePolicy`** (`llm_toolkit_schema.namespaces.fence`) — structured-output
+  validation driver with retry-sequence loop and `max_retries` limit.
+- **`TemplatePolicy`** (`llm_toolkit_schema.namespaces.template`) — variable
+  presence checking and output validation for prompt-template workflows.
+- **`iter_file(path)`** (`llm_toolkit_schema.stream`) — synchronous generator
+  that streams events from an NDJSON file without buffering the entire file.
+- **`aiter_file(path)`** (`llm_toolkit_schema.stream`) — async-generator
+  equivalent of `iter_file`.
+
+---
+
 ## 1.1.0 — 2026-03-01
 
 ### Added

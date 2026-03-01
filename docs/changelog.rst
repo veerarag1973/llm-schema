@@ -16,6 +16,81 @@ Unreleased
 
 ----
 
+1.1.1 — 2026-03-15
+--------------------
+
+Fixed
+^^^^^
+
+- **``Event.payload``** now returns a read-only ``MappingProxyType``; mutating
+  the returned object no longer silently corrupts event state.
+- **``EventGovernancePolicy(strict_unknown=True)``** now correctly raises
+  ``GovernanceViolationError`` for unregistered event types (was a no-op).
+- **``_cli.py``** — broad ``except Exception`` replaced with typed
+  ``(DeserializationError, SchemaValidationError, KeyError, TypeError)``.
+- **``stream.py``** — broad ``except Exception`` in ``EventStream.from_file``
+  and ``EventStream.from_kafka`` replaced with ``(LLMSchemaError, ValueError)``.
+- **``validate.py``** — checksum regex tightened to ``^sha256:[0-9a-f]{64}$``
+  and signature regex to ``^hmac-sha256:[0-9a-f]{64}$``, aligning with the
+  prefixes produced by ``signing.py``.
+- **``export/datadog.py``** — fallback IDs use deterministic SHA-256
+  derivation; span start uses ``event.timestamp``; ``dd_site`` and
+  ``agent_url`` validated on construction.
+- **``export/otlp.py``** — ``export_batch`` now chunks by ``batch_size``;
+  URL scheme validated on construction.
+- **``export/webhook.py``** — URL scheme validated on construction.
+- **``export/grafana.py``** — URL scheme validated on construction.
+- **``redact.py``** — ``_has_redactable`` / ``_count_redactable`` use
+  ``collections.abc.Mapping`` ABC instead of ``dict``.
+
+Added
+^^^^^
+
+- **``GuardPolicy``** (``llm_toolkit_schema.namespaces.guard``) — runtime
+  input/output guardrail enforcement (fail-open / fail-closed, callable
+  checkers).
+- **``FencePolicy``** (``llm_toolkit_schema.namespaces.fence``) —
+  structured-output validation driver with retry-sequence loop.
+- **``TemplatePolicy``** (``llm_toolkit_schema.namespaces.template``) —
+  variable presence checking and output validation.
+- **``iter_file()``** / **``aiter_file()``** (``llm_toolkit_schema.stream``)
+  — synchronous and async generators for memory-efficient NDJSON streaming.
+
+----
+
+1.1.0 — 2026-03-01
+--------------------
+
+Added
+^^^^^
+
+- **Datadog APM exporter** (``DatadogExporter``, ``DatadogResourceAttributes``)
+  — sends events to the Datadog Agent HTTP API as APM trace spans.
+- **Grafana Loki exporter** (``GrafanaLokiExporter``) — pushes events to a
+  Grafana Loki endpoint as structured log streams.
+- **Kafka consumer support** — ``EventStream.from_kafka()`` reads events from
+  a Kafka topic using the ``confluent_kafka`` optional extra.
+- **Consumer registration API** (``llm_toolkit_schema.consumer``) —
+  ``ConsumerRecord``, ``ConsumerRegistry``, ``register_consumer()``,
+  ``assert_compatible()``, ``IncompatibleSchemaError``.
+- **Schema governance engine** (``llm_toolkit_schema.governance``) —
+  ``EventGovernancePolicy``, ``GovernanceViolationError``,
+  ``GovernanceWarning``, ``set_global_policy()``, ``get_global_policy()``.
+- **Deprecation registry** (``llm_toolkit_schema.deprecations``) —
+  ``DeprecationNotice``, ``DeprecationRegistry``, ``mark_deprecated()``,
+  ``warn_if_deprecated()``, ``list_deprecated()``.
+- **LangChain & LlamaIndex adapters** (``llm_toolkit_schema.integrations``)
+  — callback/handler shims for ecosystem observability.
+- **v2 migration roadmap** — ``v2_migration_roadmap`` constant and
+  ``llm-toolkit-schema migrate`` CLI sub-command.
+
+Changed
+^^^^^^^
+
+- Version: ``1.0.1`` → ``1.1.0``
+
+----
+
 1.0.1 — 2026-03-01
 --------------------
 
