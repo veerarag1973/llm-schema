@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="100% test coverage"/>
   <img src="https://img.shields.io/badge/tests-1084%20passing-brightgreen" alt="1084 tests"/>
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependencies"/>
-  <a href="docs/index.rst"><img src="https://img.shields.io/badge/docs-local-4c8cbf" alt="Documentation"/></a>
+  <a href="docs/index.md"><img src="https://img.shields.io/badge/docs-local-4c8cbf" alt="Documentation"/></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"/>
 </p>
 
@@ -368,13 +368,13 @@ The `llm.trace.*` namespace payload schema is **additionally frozen at v1**: eve
 
 ## Changelog
 
-See [docs/changelog.rst](docs/changelog.rst) or the [release history on PyPI](https://pypi.org/project/llm-toolkit-schema/#history).
+See [docs/changelog.md](docs/changelog.md) or the [release history on PyPI](https://pypi.org/project/llm-toolkit-schema/#history).
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please read the [Contributing Guide](docs/contributing.rst) first, then open an issue or pull request.
+Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) first, then open an issue or pull request.
 
 Key rules:
 - All new code must maintain **100 % test coverage**
@@ -392,8 +392,8 @@ Key rules:
 <p align="center">
   Made with care for the LLM Developer Toolkit ecosystem.<br/>
   <a href="https://pypi.org/project/llm-toolkit-schema/">PyPI</a> ·
-  <a href="docs/index.rst">Docs</a> ·
-  <a href="docs/quickstart.rst">Quickstart</a> ·
-  <a href="docs/api/index.rst">API Reference</a> ·
+  <a href="docs/index.md">Docs</a> ·
+  <a href="docs/quickstart.md">Quickstart</a> ·
+  <a href="docs/api/index.md">API Reference</a> ·
   <a href="https://github.com/llm-toolkit/llm-toolkit-schema/issues">Report a bug</a>
 </p>

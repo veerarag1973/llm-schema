@@ -1,0 +1,84 @@
+# Documentation Index
+
+> **llm-toolkit-schema** — The foundational shared event schema for the LLM Developer Toolkit.  
+> Current release: **1.0.1** — [Changelog](https://github.com/llm-toolkit/llm-toolkit-schema/releases)
+
+This index links to every documentation page in this folder.
+
+---
+
+## Getting Started
+
+| Page | Description |
+|------|-------------|
+| [Quickstart](quickstart.md) | Create your first event, sign a chain, and export — in 5 minutes |
+| [Installation](installation.md) | Install from PyPI, optional extras, and dev setup |
+
+---
+
+## User Guide
+
+| Page | Description |
+|------|-------------|
+| [User Guide](user_guide/index.md) | Overview of all user guide topics |
+| [Events](user_guide/events.md) | Event envelope, event types, serialisation, validation, ULIDs |
+| [HMAC Signing & Audit Chains](user_guide/signing.md) | Sign events, build tamper-evident chains, detect tampering |
+| [PII Redaction](user_guide/redaction.md) | Sensitivity levels, redaction policies, PII detection |
+| [Compliance & Tenant Isolation](user_guide/compliance.md) | Compatibility checklist, chain integrity, tenant isolation |
+| [Export Backends & EventStream](user_guide/export.md) | JSONL, Webhook, OTLP exporters and the EventStream router |
+| [Migration Guide](user_guide/migration.md) | Migrate stored events to new payload schemas |
+
+---
+
+## API Reference
+
+| Page | Module |
+|------|--------|
+| [API Reference](api/index.md) | Module summary and full listing |
+| [event](api/event.md) | `llm_toolkit_schema.event` — Event envelope and serialisation |
+| [types](api/types.md) | `llm_toolkit_schema.types` — EventType enum, custom type validation |
+| [signing](api/signing.md) | `llm_toolkit_schema.signing` — HMAC signing and AuditStream |
+| [redact](api/redact.md) | `llm_toolkit_schema.redact` — Redactable, RedactionPolicy, PII helpers |
+| [compliance](api/compliance.md) | `llm_toolkit_schema.compliance` — Compatibility and isolation checks |
+| [export](api/export.md) | `llm_toolkit_schema.export` — OTLP, Webhook, JSONL backends |
+| [stream](api/stream.md) | `llm_toolkit_schema.stream` — EventStream multiplexer |
+| [validate](api/validate.md) | `llm_toolkit_schema.validate` — JSON Schema validation |
+| [migrate](api/migrate.md) | `llm_toolkit_schema.migrate` — Migration scaffold |
+| [ulid](api/ulid.md) | `llm_toolkit_schema.ulid` — ULID generation and helpers |
+| [exceptions](api/exceptions.md) | `llm_toolkit_schema.exceptions` — Exception hierarchy |
+| [models](api/models.md) | `llm_toolkit_schema.models` — Pydantic v2 model layer |
+
+---
+
+## Namespace Payload Catalogue
+
+| Page | Namespace | Purpose |
+|------|-----------|----------|
+| [Namespace index](namespaces/index.md) | — | Overview and quick-reference table |
+| [trace](namespaces/trace.md) | `llm.trace.*` | Model inputs, outputs, latency, token counts **(FROZEN v1)** |
+| [cost](namespaces/cost.md) | `llm.cost.*` | Per-event cost estimates and budget tracking |
+| [cache](namespaces/cache.md) | `llm.cache.*` | Cache hit/miss, key, TTL, backend metadata |
+| [diff](namespaces/diff.md) | `llm.diff.*` | Prompt/response delta between two events |
+| [eval](namespaces/eval.md) | `llm.eval.*` | Scoring, grading, and human-feedback payloads |
+| [fence](namespaces/fence.md) | `llm.fence.*` | Perimeter checks, topic constraints, allow/block lists |
+| [guard](namespaces/guard.md) | `llm.guard.*` | Safety classifier outputs and block decisions |
+| [prompt](namespaces/prompt.md) | `llm.prompt.*` | Prompt versioning, template rendering, variable sets |
+| [redact_ns](namespaces/redact_ns.md) | `llm.redact.*` | PII detection and redaction audit records |
+| [template](namespaces/template.md) | `llm.template.*` | Template registry metadata and render snapshots |
+
+---
+
+## Command-Line Interface
+
+| Page | Description |
+|------|-------------|
+| [CLI](cli.md) | `llm-toolkit-schema check-compat` command reference |
+
+---
+
+## Development
+
+| Page | Description |
+|------|-------------|
+| [Contributing](contributing.md) | Dev setup, code standards, PR checklist |
+| [Changelog](changelog.md) | Version history and release notes |
