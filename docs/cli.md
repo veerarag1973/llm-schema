@@ -121,3 +121,108 @@ if not result:
 ```
 
 See [llm_toolkit_schema.compliance](api/compliance.md) for the full compliance API.
+
+---
+
+## `list-deprecated`
+
+Print all deprecation notices from the global `DeprecationRegistry`.
+
+**Usage**
+
+```bash
+llm-toolkit-schema list-deprecated
+```
+
+**Example output**
+
+```
+Deprecated event types (4 total):
+  llm.cache.evicted → llm.cache.entry_evicted (since 1.1.0, sunset 2.0.0)
+  llm.cost.estimate → llm.cost.estimated (since 1.1.0, sunset 2.0.0)
+  llm.eval.regression → llm.eval.regression_failed (since 1.1.0, sunset 2.0.0)
+  ...
+```
+
+The registry is pre-populated at startup with all entries from
+`v2_migration_roadmap()`. Additional notices registered at runtime via
+`mark_deprecated()` are also included.
+
+---
+
+## `migration-roadmap`
+
+Print the structured Phase 9 v2 migration roadmap.
+
+**Usage**
+
+```bash
+llm-toolkit-schema migration-roadmap [--json]
+```
+
+**Options**
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output the roadmap as a JSON array instead of a human-readable table. |
+
+**Example — table output**
+
+```
+v2 Migration Roadmap (9 entries)
+===================================
+llm.cache.evicted
+  Since:       1.1.0
+  Sunset:      2.0.0
+  Policy:      NEXT_MAJOR
+  Replacement: llm.cache.entry_evicted
+  Notes:       Rename for namespace consistency.
+
+...
+```
+
+**Example — JSON output**
+
+```bash
+llm-toolkit-schema migration-roadmap --json | python -m json.tool
+```
+
+---
+
+## `check-consumers`
+
+Print all consumers registered in the global `ConsumerRegistry` and check
+their compatibility with the installed schema version.
+
+**Usage**
+
+```bash
+llm-toolkit-schema check-consumers
+```
+
+**Exit codes**
+
+| Code | Meaning |
+|------|---------|
+| `0` | All consumers are compatible. |
+| `1` | One or more consumers require a newer schema version. |
+
+**Example output — all compatible**
+
+```
+Registered consumers (2 total):
+  billing-agent    namespaces=(llm.cost.*,)          requires=1.0  [OK]
+  analytics-agent  namespaces=(llm.trace.*, llm.eval.*)  requires=1.1  [OK]
+
+All consumers are compatible with installed schema version 1.1.0.
+```
+
+**Example output — incompatible**
+
+```
+Registered consumers (1 total):
+  future-tool  namespaces=(llm.trace.*,)  requires=2.0  [INCOMPATIBLE]
+
+ERROR: 1 consumer(s) require a schema version not satisfied by 1.1.0.
+```
+

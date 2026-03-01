@@ -1,7 +1,124 @@
 # Migration Guide
 
 `llm_toolkit_schema.migrate` provides helpers for upgrading stored event payloads
-to use new namespace payload schemas.
+to use new namespace payload schemas, plus the Phase 9 v2 migration roadmap
+so you can prepare for breaking changes before v2.0 ships.
+
+## MigrationResult
+
+Every migration function returns a `MigrationResult` dataclass carrying
+per-event outcome metadata:
+
+```python
+from llm_toolkit_schema.migrate import MigrationResult
+
+result: MigrationResult   # returned by v1_to_v2()
+result.source_version     # "1.0"
+result.target_version     # "2.0"
+result.event_id           # event ULID
+result.success            # True / False
+result.transformed_fields # tuple of modified field names
+result.warnings           # tuple of non-fatal messages
+```
+
+## Migrating v1.0 → v2.0 (scaffold)
+
+`v1_to_v2()` is a **scaffold** that raises `NotImplementedError` until the
+v2.0 schema is finalised. Write the call-site now to receive the working
+implementation in v2.0 with zero code changes:
+
+```python
+from llm_toolkit_schema.migrate import v1_to_v2
+
+try:
+    new_event, result = v1_to_v2(event)
+except NotImplementedError:
+    pass  # expected until v2.0 ships
+```
+
+## v2 Migration Roadmap
+
+Phase 9 ships a structured roadmap of every event type that will change
+in v2.0. Use `v2_migration_roadmap()` to audit your codebase:
+
+```python
+from llm_toolkit_schema.migrate import v2_migration_roadmap
+
+for record in v2_migration_roadmap():
+    print(record.summary())
+```
+
+Example output:
+
+```
+llm.cache.evicted → llm.cache.entry_evicted (since 1.1.0, sunset 2.0.0, NEXT_MAJOR)
+llm.cost.estimate → llm.cost.estimated (since 1.1.0, sunset 2.0.0, NEXT_MAJOR)
+llm.eval.regression → llm.eval.regression_failed (since 1.1.0, sunset 2.0.0, NEXT_MAJOR)
+...
+```
+
+Each `DeprecationRecord` provides:
+
+| Field | Description |
+|-------|-------------|
+| `event_type` | The deprecated event type string |
+| `since` | Version deprecated (`"1.1.0"`) |
+| `sunset` | Planned removal version (`"2.0.0"`) |
+| `sunset_policy` | `SunsetPolicy.NEXT_MAJOR` for all roadmap entries |
+| `replacement` | Recommended new event type |
+| `migration_notes` | Guidance text |
+| `field_renames` | `{old_field: new_field}` dict for payload field renames |
+
+### CLI roadmap view
+
+```bash
+# Human-readable table
+llm-toolkit-schema migration-roadmap
+
+# JSON for tooling
+llm-toolkit-schema migration-roadmap --json
+```
+
+## Sunset policy
+
+| Policy | Meaning |
+|--------|---------|
+| `NEXT_MAJOR` | Removed in v2.0.0 |
+| `NEXT_MINOR` | Removed in the next minor release |
+| `LONG_TERM` | Removed in v3.0.0 or later |
+| `UNSCHEDULED` | Advisory deprecation; no removal planned |
+
+All Phase 9 roadmap entries use `NEXT_MAJOR` — they will be removed when v2.0
+ships.
+
+## Deprecation warnings
+
+At import time, `llm_toolkit_schema.deprecations` auto-populates the global
+`DeprecationRegistry` with every entry from `v2_migration_roadmap()`. Callers
+can surface these warnings at runtime:
+
+```python
+from llm_toolkit_schema.deprecations import warn_if_deprecated
+
+# Inside event processing loops, or at schema validation time:
+warn_if_deprecated(event.event_type)
+# → emits DeprecationWarning if this type is on the roadmap
+```
+
+### CLI deprecation list
+
+```bash
+llm-toolkit-schema list-deprecated
+```
+
+## Preparing for v2.0
+
+1. Run `llm-toolkit-schema migration-roadmap` to see the full list.
+2. Search your code for deprecated event type strings.
+3. Replace with the recommended `replacement` type from each record.
+4. Apply any `field_renames` to affected payload construction sites.
+5. Update consumer registry entries with `schema_version="2.0"` once v2.0 ships.
+
 
 ## MigrationResult
 

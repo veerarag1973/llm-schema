@@ -12,6 +12,78 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## 1.1.0 — 2026-03-01
+
+### Added
+
+**Phase 7 — Enterprise Export Backends**
+
+- **`DatadogExporter`** (`llm_toolkit_schema.export.datadog`) — async exporter
+  that sends events as Datadog APM trace spans (via the local Agent) and as
+  Datadog metrics series (via the public API). No `ddtrace` dependency.
+- **`DatadogResourceAttributes`** — frozen dataclass with `service`, `env`,
+  `version`, and `extra` fields; `.to_tags()` for tag-string serialisation.
+- **`GrafanaLokiExporter`** (`llm_toolkit_schema.export.grafana`) — async
+  exporter that pushes events to Grafana Loki via the `/loki/api/v1/push`
+  HTTP endpoint. Supports multi-tenant deployments via `X-Scope-OrgID`.
+- **`ConsumerRegistry`** / **`ConsumerRecord`** (`llm_toolkit_schema.consumer`)
+  — thread-safe registry for declaring schema-namespace dependencies at startup.
+  `assert_compatible()` raises `IncompatibleSchemaError` on version mismatches.
+- **`EventGovernancePolicy`** (`llm_toolkit_schema.governance`) — data-class
+  policy with blocked types, deprecated-type warnings, and arbitrary custom
+  rule callbacks. Module-level `set_global_policy()` / `check_event()`.
+- **`GovernanceViolationError`**, **`GovernanceWarning`** — governance
+  exception and warning types.
+
+**Phase 8 — Ecosystem Integrations & Kafka**
+
+- **`EventStream.from_kafka()`** — classmethod constructor that drains a Kafka
+  topic into an `EventStream`. Requires optional extra `kafka`.
+- **`DeprecationRegistry`** / **`DeprecationNotice`**
+  (`llm_toolkit_schema.deprecations`) — structured per-event-type deprecation
+  tracking with `warn_if_deprecated()` and `list_deprecated()`.
+- **`LLMSchemaCallbackHandler`** (`llm_toolkit_schema.integrations.langchain`)
+  — LangChain `BaseCallbackHandler` that emits `llm.trace.*` events for all LLM
+  and tool invocations. Requires optional extra `langchain`.
+- **`LLMSchemaEventHandler`** (`llm_toolkit_schema.integrations.llamaindex`)
+  — LlamaIndex callback event handler. Requires optional extra `llamaindex`.
+
+**Phase 9 — v2 Migration Framework**
+
+- **`SunsetPolicy`** (`llm_toolkit_schema.migrate`) — `Enum` classifying
+  removal urgency: `NEXT_MAJOR`, `NEXT_MINOR`, `LONG_TERM`, `UNSCHEDULED`.
+- **`DeprecationRecord`** (`llm_toolkit_schema.migrate`) — frozen dataclass
+  capturing `event_type`, `since`, `sunset`, `sunset_policy`, `replacement`,
+  `migration_notes`, and `field_renames` for structured migration guidance.
+- **`v2_migration_roadmap()`** — returns all 9 deprecation records for event
+  types that will change in v2.0, sorted by `event_type`.
+- **CLI: `list-deprecated`** — prints all deprecation notices from the global
+  registry.
+- **CLI: `migration-roadmap [--json]`** — prints the v2 migration roadmap in
+  human-readable or JSON form.
+- **CLI: `check-consumers`** — lists all registered consumers and their
+  compatibility status against the installed schema version.
+
+### Changed
+
+- Version: `1.0.1` → `1.1.0`
+- `export/__init__.py` now re-exports `DatadogExporter`,
+  `DatadogResourceAttributes`, and `GrafanaLokiExporter`.
+- Top-level `llm_toolkit_schema` package re-exports all Phase 7/8/9 public
+  symbols.
+
+### Optional extras added
+
+| Extra | Enables |
+|-------|---------|
+| `kafka` | `EventStream.from_kafka()` via `kafka-python>=2.0` |
+| `langchain` | `LLMSchemaCallbackHandler` via `langchain-core>=0.2` |
+| `llamaindex` | `LLMSchemaEventHandler` via `llama-index-core>=0.10` |
+| `datadog` | `DatadogExporter` (stdlib-only transport; extra reserved for future `ddtrace` integration) |
+| `all` | All optional extras in one install target |
+
+---
+
 ## 1.0.1 — 2026-03-01
 
 ### Changed

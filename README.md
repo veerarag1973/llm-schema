@@ -14,7 +14,7 @@
   <a href="https://pypi.org/project/llm-toolkit-schema/"><img src="https://img.shields.io/pypi/pyversions/llm-toolkit-schema?color=4c8cbf&logo=python&logoColor=white" alt="Python versions"/></a>
   <a href="https://pypi.org/project/llm-toolkit-schema/"><img src="https://img.shields.io/pypi/dm/llm-toolkit-schema?color=4c8cbf&label=downloads" alt="Monthly downloads"/></a>
   <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="100% test coverage"/>
-  <img src="https://img.shields.io/badge/tests-1084%20passing-brightgreen" alt="1084 tests"/>
+  <img src="https://img.shields.io/badge/tests-1214%20passing-brightgreen" alt="1214 tests"/>
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependencies"/>
   <a href="docs/index.md"><img src="https://img.shields.io/badge/docs-local-4c8cbf" alt="Documentation"/></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"/>
@@ -63,6 +63,11 @@ pip install "llm-toolkit-schema[jsonschema]"   # strict JSON Schema validation
 pip install "llm-toolkit-schema[http]"         # Webhook + OTLP export
 pip install "llm-toolkit-schema[pydantic]"     # Pydantic v2 model layer
 pip install "llm-toolkit-schema[otel]"         # OpenTelemetry SDK integration
+pip install "llm-toolkit-schema[kafka]"        # EventStream.from_kafka() via kafka-python
+pip install "llm-toolkit-schema[langchain]"    # LangChain callback handler
+pip install "llm-toolkit-schema[llamaindex]"   # LlamaIndex event handler
+pip install "llm-toolkit-schema[datadog]"      # Datadog APM + metrics exporter
+pip install "llm-toolkit-schema[all]"          # everything above
 ```
 
 ---
@@ -141,23 +146,51 @@ from llm_toolkit_schema.stream import EventStream
 from llm_toolkit_schema.export.jsonl import JSONLExporter
 from llm_toolkit_schema.export.webhook import WebhookExporter
 from llm_toolkit_schema.export.otlp import OTLPExporter
+from llm_toolkit_schema.export.datadog import DatadogExporter
+from llm_toolkit_schema.export.grafana import GrafanaLokiExporter
 
-stream = EventStream()
+stream = EventStream(events)
 
 # Write everything to a local file
-stream.add_exporter(JSONLExporter("events.jsonl"))
+await stream.drain(JSONLExporter("events.jsonl"))
 
-# Also send guard-blocked events to a Slack webhook
-stream.add_exporter(
+# Ship to your OpenTelemetry collector
+await stream.drain(OTLPExporter("http://otel-collector:4318/v1/traces"))
+
+# Send to Datadog APM (traces + metrics)
+await stream.drain(DatadogExporter(
+    service="my-app",
+    env="production",
+    agent_url="http://dd-agent:8126",
+    api_key="your-dd-api-key",
+))
+
+# Push to Grafana Loki
+await stream.drain(GrafanaLokiExporter(
+    url="http://loki:3100",
+    labels={"app": "my-app", "env": "production"},
+))
+
+# Fan-out: guard-blocked events → Slack webhook
+await stream.route(
     WebhookExporter("https://hooks.slack.com/your-webhook"),
-    filter=lambda e: e.event_type == "llm.guard.blocked",
+    predicate=lambda e: e.event_type == "llm.guard.blocked",
 )
+```
 
-# And ship to your OpenTelemetry collector
-stream.add_exporter(OTLPExporter("http://otel-collector:4317", service_name="my-app"))
+#### Kafka source
 
-for event in events:
-    stream.emit(event)
+```python
+from llm_toolkit_schema.stream import EventStream
+
+# Drain a Kafka topic directly into an EventStream
+stream = EventStream.from_kafka(
+    topic="llm-events",
+    bootstrap_servers="kafka:9092",
+    group_id="analytics",
+    max_messages=5000,
+)
+await stream.drain(exporter)
 ```
 
 ---
@@ -214,18 +247,38 @@ Drop this into your CI pipeline and catch schema drift before it reaches product
 </tr>
 <tr>
   <td><code>llm_toolkit_schema.export</code></td>
-  <td>Ship events to files (JSONL), HTTP endpoints (Webhook), or OTLP collectors</td>
+  <td>Ship events to files (JSONL), HTTP webhooks, OTLP collectors, Datadog APM, or Grafana Loki</td>
   <td>Infra / observability teams</td>
 </tr>
 <tr>
   <td><code>llm_toolkit_schema.stream</code></td>
-  <td>Fan-out router — one <code>emit()</code> call reaches multiple backends simultaneously</td>
+  <td>Fan-out router — one <code>drain()</code> call reaches multiple backends; Kafka source via <code>from_kafka()</code></td>
   <td>Platform engineers</td>
 </tr>
 <tr>
   <td><code>llm_toolkit_schema.validate</code></td>
   <td>JSON Schema validation against the published v1.0 schema</td>
   <td>All teams</td>
+</tr>
+<tr>
+  <td><code>llm_toolkit_schema.consumer</code></td>
+  <td>Declare schema-namespace dependencies; fail fast at startup if version requirements aren’t met</td>
+  <td>Platform / integration teams</td>
+</tr>
+<tr>
+  <td><code>llm_toolkit_schema.governance</code></td>
+  <td>Policy-based event gating — block prohibited types, warn on deprecated usage, enforce custom rules</td>
+  <td>Platform / compliance teams</td>
+</tr>
+<tr>
+  <td><code>llm_toolkit_schema.deprecations</code></td>
+  <td>Register and surface per-event-type deprecation notices at runtime</td>
+  <td>Library maintainers</td>
+</tr>
+<tr>
+  <td><code>llm_toolkit_schema.integrations</code></td>
+  <td>Plug-in adapters for LangChain (<code>LLMSchemaCallbackHandler</code>) and LlamaIndex (<code>LLMSchemaEventHandler</code>)</td>
+  <td>App developers</td>
 </tr>
 <tr>
   <td><code>llm_toolkit_schema.namespaces</code></td>
@@ -281,7 +334,7 @@ event = Event(
 
 ## Quality standards
 
-- **1 084 tests** — unit, integration, property-based (Hypothesis), and performance benchmarks
+- **1 214 tests** — unit, integration, property-based (Hypothesis), and performance benchmarks
 - **100 % line and branch coverage** — no dead code ships
 - **Zero required dependencies** — the entire core runs on Python's standard library alone
 - **Typed** — full `py.typed` marker; works with mypy and pyright out of the box
@@ -298,19 +351,27 @@ llm_toolkit_schema/
 ├── signing.py        ← HMAC signing & audit chains
 ├── redact.py         ← PII redaction
 ├── validate.py       ← JSON Schema validation
+├── consumer.py       ← Consumer registry & schema-version compatibility
+├── governance.py     ← Event governance policies
+├── deprecations.py   ← Per-event-type deprecation tracking
 ├── compliance/       ← Compatibility checklist suite
 ├── export/
 │   ├── jsonl.py      ← Local file export
 │   ├── webhook.py    ← HTTP POST export
-│   └── otlp.py       ← OpenTelemetry export
-├── stream.py         ← EventStream fan-out router
+│   ├── otlp.py       ← OpenTelemetry export
+│   ├── datadog.py    ← Datadog APM traces + metrics
+│   └── grafana.py    ← Grafana Loki export
+├── stream.py         ← EventStream fan-out router (+ Kafka source)
+├── integrations/
+│   ├── langchain.py  ← LangChain callback handler
+│   └── llamaindex.py ← LlamaIndex event handler
 ├── namespaces/       ← Typed payload dataclasses
 │   ├── trace.py        (frozen v1)
 │   ├── cost.py
 │   ├── cache.py
 │   └── …
 ├── models.py         ← Optional Pydantic v2 models
-└── migrate.py        ← Schema migration helpers
+└── migrate.py        ← Schema migration helpers & v2 roadmap
 ```
 
 ---
@@ -326,7 +387,7 @@ python -m venv .venv
 # source .venv/bin/activate     # macOS / Linux
 
 pip install -e ".[dev]"
-pytest                          # run all 1 084 tests
+pytest                          # run all 1 214 tests
 ```
 
 <details>

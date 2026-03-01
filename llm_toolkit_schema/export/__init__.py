@@ -10,6 +10,10 @@ Available exporters
   request signing.
 * :class:`~llm_toolkit_schema.export.jsonl.JSONLExporter` — newline-delimited JSON for
   local development and audit trails.
+* :class:`~llm_toolkit_schema.export.datadog.DatadogExporter` — Datadog APM traces +
+  custom metrics via the Datadog Agent.
+* :class:`~llm_toolkit_schema.export.grafana.GrafanaLokiExporter` — Grafana Loki push
+  exporter for structured log delivery.
 
 All exporters are async by default; every ``export`` / ``export_batch`` method
 is a coroutine.
@@ -24,6 +28,8 @@ Usage example::
 
 from __future__ import annotations
 
+from llm_toolkit_schema.export.datadog import DatadogExporter, DatadogResourceAttributes
+from llm_toolkit_schema.export.grafana import GrafanaLokiExporter
 from llm_toolkit_schema.export.jsonl import JSONLExporter
 from llm_toolkit_schema.export.otlp import OTLPExporter, ResourceAttributes
 from llm_toolkit_schema.export.webhook import WebhookExporter
@@ -33,4 +39,7 @@ __all__ = [
     "ResourceAttributes",
     "WebhookExporter",
     "JSONLExporter",
+    "DatadogExporter",
+    "DatadogResourceAttributes",
+    "GrafanaLokiExporter",
 ]

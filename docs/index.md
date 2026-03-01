@@ -1,7 +1,7 @@
 # Documentation Index
 
 > **llm-toolkit-schema** — The foundational shared event schema for the LLM Developer Toolkit.  
-> Current release: **1.0.1** — [Changelog](https://github.com/llm-toolkit/llm-toolkit-schema/releases)
+> Current release: **1.1.0** — [Changelog](https://github.com/llm-toolkit/llm-toolkit-schema/releases)
 
 This index links to every documentation page in this folder.
 
@@ -25,8 +25,9 @@ This index links to every documentation page in this folder.
 | [HMAC Signing & Audit Chains](user_guide/signing.md) | Sign events, build tamper-evident chains, detect tampering |
 | [PII Redaction](user_guide/redaction.md) | Sensitivity levels, redaction policies, PII detection |
 | [Compliance & Tenant Isolation](user_guide/compliance.md) | Compatibility checklist, chain integrity, tenant isolation |
-| [Export Backends & EventStream](user_guide/export.md) | JSONL, Webhook, OTLP exporters and the EventStream router |
-| [Migration Guide](user_guide/migration.md) | Migrate stored events to new payload schemas |
+| [Export Backends & EventStream](user_guide/export.md) | JSONL, Webhook, OTLP, Datadog, Grafana Loki exporters; EventStream; Kafka source |
+| [Governance, Consumer Registry & Deprecations](user_guide/governance.md) | Block/warn event types, declare schema dependencies, track deprecations |
+| [Migration Guide](user_guide/migration.md) | v2 migration roadmap, deprecation records, `v1_to_v2()` scaffold |
 
 ---
 
@@ -40,10 +41,14 @@ This index links to every documentation page in this folder.
 | [signing](api/signing.md) | `llm_toolkit_schema.signing` — HMAC signing and AuditStream |
 | [redact](api/redact.md) | `llm_toolkit_schema.redact` — Redactable, RedactionPolicy, PII helpers |
 | [compliance](api/compliance.md) | `llm_toolkit_schema.compliance` — Compatibility and isolation checks |
-| [export](api/export.md) | `llm_toolkit_schema.export` — OTLP, Webhook, JSONL backends |
-| [stream](api/stream.md) | `llm_toolkit_schema.stream` — EventStream multiplexer |
+| [export](api/export.md) | `llm_toolkit_schema.export` — OTLP, Webhook, JSONL, Datadog, Grafana Loki backends |
+| [stream](api/stream.md) | `llm_toolkit_schema.stream` — EventStream multiplexer with Kafka support |
 | [validate](api/validate.md) | `llm_toolkit_schema.validate` — JSON Schema validation |
-| [migrate](api/migrate.md) | `llm_toolkit_schema.migrate` — Migration scaffold |
+| [migrate](api/migrate.md) | `llm_toolkit_schema.migrate` — Migration scaffold, `SunsetPolicy`, `v2_migration_roadmap()` |
+| [consumer](api/consumer.md) | `llm_toolkit_schema.consumer` — ConsumerRegistry, IncompatibleSchemaError |
+| [governance](api/governance.md) | `llm_toolkit_schema.governance` — EventGovernancePolicy, GovernanceViolationError |
+| [deprecations](api/deprecations.md) | `llm_toolkit_schema.deprecations` — DeprecationRegistry, warn_if_deprecated() |
+| [integrations](api/integrations.md) | `llm_toolkit_schema.integrations` — LangChain + LlamaIndex adapters |
 | [ulid](api/ulid.md) | `llm_toolkit_schema.ulid` — ULID generation and helpers |
 | [exceptions](api/exceptions.md) | `llm_toolkit_schema.exceptions` — Exception hierarchy |
 | [models](api/models.md) | `llm_toolkit_schema.models` — Pydantic v2 model layer |
@@ -72,7 +77,7 @@ This index links to every documentation page in this folder.
 
 | Page | Description |
 |------|-------------|
-| [CLI](cli.md) | `llm-toolkit-schema check-compat` command reference |
+| [CLI](cli.md) | `llm-toolkit-schema` command reference: `check-compat`, `list-deprecated`, `migration-roadmap`, `check-consumers` |
 
 ---
 

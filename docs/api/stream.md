@@ -123,6 +123,47 @@ Consume an async iterator into an `EventStream`.
 
 ---
 
+#### `from_kafka(topic, bootstrap_servers, *, group_id=None, sentinel=None, max_messages=None, poll_timeout_ms=1000, skip_errors=False) -> EventStream` *(classmethod)*
+
+Drain a Kafka topic into an `EventStream`.
+
+Requires `kafka-python>=2.0`. Raises `ImportError` with an installation hint
+if `kafka-python` is not installed.
+
+**Args:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `topic` | `str` | — | Kafka topic name to consume. |
+| `bootstrap_servers` | `str \| List[str]` | — | Kafka broker address(es), e.g. `"localhost:9092"`. |
+| `group_id` | `str \| None` | `None` | Consumer group ID. `None` = no group (earliest offset). |
+| `sentinel` | `object` | `None` | Stop-value that signals end-of-stream. Not added to the stream. |
+| `max_messages` | `int \| None` | `None` | Maximum number of messages to consume before stopping. `None` = drain until sentinel or topic exhaustion. |
+| `poll_timeout_ms` | `int` | `1000` | Kafka poll timeout in milliseconds. |
+| `skip_errors` | `bool` | `False` | When `True`, silently skip messages that cannot be deserialised. |
+
+**Returns:** `EventStream`
+
+**Raises:**
+- `ImportError` — if `kafka-python` is not installed.
+- `DeserializationError` — on a malformed message when `skip_errors=False`.
+
+**Example:**
+
+```python
+from llm_toolkit_schema.stream import EventStream
+
+stream = EventStream.from_kafka(
+    topic="llm-events",
+    bootstrap_servers="localhost:9092",
+    group_id="analytics-consumer",
+    max_messages=1000,
+)
+await stream.drain(exporter)
+```
+
+---
+
 ### Filtering methods
 
 #### `filter(predicate: Callable[[Event], bool]) -> EventStream`

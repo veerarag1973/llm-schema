@@ -233,6 +233,111 @@ class EventStream:
             events.append(event)
         return cls(events)
 
+    @classmethod
+    def from_kafka(
+        cls,
+        topic: str,
+        bootstrap_servers: Union[str, List[str]],
+        *,
+        group_id: Optional[str] = None,
+        sentinel: object = None,
+        max_messages: Optional[int] = None,
+        poll_timeout_ms: int = 1000,
+        skip_errors: bool = False,
+    ) -> "EventStream":
+        """Consume messages from a Kafka topic into an EventStream.
+
+        Each Kafka message value is deserialised as a UTF-8 JSON string and
+        parsed with :meth:`~llm_toolkit_schema.event.Event.from_json`.
+
+        Requires ``kafka-python >= 2.0`` to be installed.  Install it with::
+
+            pip install "llm-toolkit-schema[kafka]"
+
+        Consumption stops when:
+
+        * A *sentinel* message value is received (not added to stream).
+        * *max_messages* events have been collected (when set).
+        * The topic-partition reaches the end-of-partition offset and there
+          are no more messages within *poll_timeout_ms* (``StopIteration``
+          from the consumer is caught automatically).
+
+        Args:
+            topic:             Kafka topic name to consume from.
+            bootstrap_servers: Kafka broker address(es),
+                               e.g. ``"localhost:9092"`` or
+                               ``["broker1:9092", "broker2:9092"]``.
+            group_id:          Consumer group ID.  ``None`` creates an
+                               anonymous (uncoordinated) consumer.
+            sentinel:          Message value (decoded UTF-8 string) that
+                               signals end-of-stream.  The sentinel message
+                               is not added to the returned stream.
+            max_messages:      Maximum number of events to collect.  ``None``
+                               means no limit.
+            poll_timeout_ms:   Milliseconds to wait for messages in each poll
+                               (default 1 000 ms).
+            skip_errors:       When ``True``, silently skip messages that fail
+                               to deserialise instead of raising.
+
+        Returns:
+            A new :class:`EventStream` with all consumed events.
+
+        Raises:
+            ImportError: If ``kafka-python`` is not installed.
+            DeserializationError: On the first malformed message when
+                ``skip_errors=False`` (default).
+
+        Example::
+
+            stream = EventStream.from_kafka(
+                "llm-events",
+                "localhost:9092",
+                group_id="analytics-pipeline",
+                max_messages=1000,
+            )
+        """
+        try:
+            from kafka import KafkaConsumer  # type: ignore[import-untyped]
+        except ImportError as exc:  # pragma: no cover
+            raise ImportError(
+                "kafka-python is required for EventStream.from_kafka(). "
+                'Install it with: pip install "llm-toolkit-schema[kafka]"'
+            ) from exc
+
+        from llm_toolkit_schema.exceptions import DeserializationError  # lazy
+
+        consumer: Any = KafkaConsumer(
+            topic,
+            bootstrap_servers=bootstrap_servers,
+            group_id=group_id,
+            consumer_timeout_ms=poll_timeout_ms,
+            value_deserializer=lambda m: m.decode("utf-8"),
+            auto_offset_reset="earliest",
+            enable_auto_commit=group_id is not None,
+        )
+
+        events: List[Event] = []
+        try:
+            for message in consumer:
+                value = message.value
+                if value == sentinel:
+                    break
+                try:
+                    events.append(Event.from_json(value))
+                except Exception as exc:
+                    if skip_errors:
+                        continue
+                    raise DeserializationError(
+                        reason=f"Kafka message offset {message.offset}: {exc}",
+                        source_hint=f"topic={topic}",
+                    ) from exc
+                if max_messages is not None and len(events) >= max_messages:
+                    break
+        finally:
+            consumer.close()
+
+        return cls(events)
+
     # ------------------------------------------------------------------
     # Filtering
     # ------------------------------------------------------------------

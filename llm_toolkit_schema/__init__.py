@@ -128,6 +128,15 @@ v1.0 — Production-ready GA release.  Compliance toolkit
         audit chain integrity verification, and third-party compatibility
         checker.  Migration scaffold ``llm_toolkit_schema.migrate.v1_to_v2``.
         ``llm-toolkit-schema check-compat`` CLI command.
+v1.1 — Enterprise integrations (Phase 7): Datadog APM exporter
+        (``DatadogExporter``), Grafana Loki exporter (``GrafanaLokiExporter``),
+        Kafka consumer support (``EventStream.from_kafka``), Consumer
+        registration API (``llm_toolkit_schema.consumer``), Schema governance
+        engine (``llm_toolkit_schema.governance``), Deprecation registry
+        (``llm_toolkit_schema.deprecations``).  Ecosystem integrations
+        (Phase 8): LangChain and LlamaIndex callback adapters
+        (``llm_toolkit_schema.integrations``).  v2 migration roadmap
+        (Phase 9, ``v2_migration_roadmap``).
 """
 
 from llm_toolkit_schema.event import SCHEMA_VERSION, Event, Tags
@@ -171,7 +180,40 @@ from llm_toolkit_schema.ulid import extract_timestamp_ms
 from llm_toolkit_schema.ulid import generate as generate_ulid
 from llm_toolkit_schema.ulid import validate as validate_ulid
 
-from llm_toolkit_schema.export import JSONLExporter, OTLPExporter, ResourceAttributes, WebhookExporter
+from llm_toolkit_schema.export import (
+    DatadogExporter,
+    DatadogResourceAttributes,
+    GrafanaLokiExporter,
+    JSONLExporter,
+    OTLPExporter,
+    ResourceAttributes,
+    WebhookExporter,
+)
+from llm_toolkit_schema.consumer import (
+    ConsumerRecord,
+    ConsumerRegistry,
+    IncompatibleSchemaError,
+    assert_compatible,
+    get_registry as get_consumer_registry,
+    register_consumer,
+)
+from llm_toolkit_schema.governance import (
+    EventGovernancePolicy,
+    GovernanceViolationError,
+    GovernanceWarning,
+    check_event as governance_check_event,
+    get_global_policy,
+    set_global_policy,
+)
+from llm_toolkit_schema.deprecations import (
+    DeprecationNotice,
+    DeprecationRegistry,
+    get_deprecation_notice,
+    get_registry as get_deprecation_registry,
+    list_deprecated,
+    mark_deprecated,
+    warn_if_deprecated,
+)
 from llm_toolkit_schema.stream import EventStream, Exporter
 from llm_toolkit_schema.validate import validate_event
 from llm_toolkit_schema.compliance import (
@@ -186,7 +228,7 @@ from llm_toolkit_schema.compliance import (
     verify_events_scoped,
     verify_tenant_isolation,
 )
-from llm_toolkit_schema.migrate import MigrationResult, v1_to_v2
+from llm_toolkit_schema.migrate import DeprecationRecord, MigrationResult, SunsetPolicy, v1_to_v2, v2_migration_roadmap
 from llm_toolkit_schema.namespaces import (
     # cache
     CacheEvictedPayload,
@@ -228,7 +270,7 @@ from llm_toolkit_schema.namespaces import (
     ToolCall,
 )
 
-__version__: str = "1.0.1"
+__version__: str = "1.1.0"
 __all__: list[str] = [
     # Core
     "Event",
@@ -329,9 +371,38 @@ __all__: list[str] = [
     "verify_events_scoped",
     "IsolationResult",
     "IsolationViolation",
-    # Migration scaffold (v1.0)
+    # Migration scaffold & roadmap (v1.0 / Phase 9)
     "MigrationResult",
     "v1_to_v2",
+    "DeprecationRecord",
+    "SunsetPolicy",
+    "v2_migration_roadmap",
+    # Export backends — enterprise (v1.1 Phase 7)
+    "DatadogExporter",
+    "DatadogResourceAttributes",
+    "GrafanaLokiExporter",
+    # Consumer registration (v1.1 Phase 7)
+    "ConsumerRecord",
+    "ConsumerRegistry",
+    "IncompatibleSchemaError",
+    "register_consumer",
+    "get_consumer_registry",
+    "assert_compatible",
+    # Schema governance (v1.1 Phase 7)
+    "EventGovernancePolicy",
+    "GovernanceViolationError",
+    "GovernanceWarning",
+    "get_global_policy",
+    "set_global_policy",
+    "governance_check_event",
+    # Deprecation registry (v1.1 Phase 8)
+    "DeprecationNotice",
+    "DeprecationRegistry",
+    "mark_deprecated",
+    "get_deprecation_notice",
+    "warn_if_deprecated",
+    "list_deprecated",
+    "get_deprecation_registry",
     # Metadata
     "__version__",
 ]

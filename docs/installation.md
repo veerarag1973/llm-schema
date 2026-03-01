@@ -14,16 +14,21 @@ pip install llm-toolkit-schema
 ## Optional extras
 
 | Extra | Install command | What it enables |
-|-------|-----------------|-----------------|
+|-------|-----------------|----------------|
 | `jsonschema` | `pip install "llm-toolkit-schema[jsonschema]"` | `validate_event` with full JSON Schema validation |
-| `http` | `pip install "llm-toolkit-schema[http]"` | `OTLPExporter` and `WebhookExporter` (requires `httpx`) |
+| `http` | `pip install "llm-toolkit-schema[http]"` | `OTLPExporter` and `WebhookExporter` (stdlib transport; reserved for future `httpx` upgrade) |
 | `pydantic` | `pip install "llm-toolkit-schema[pydantic]"` | `llm_toolkit_schema.models` — Pydantic v2 model layer, `model_json_schema()` |
 | `otel` | `pip install "llm-toolkit-schema[otel]"` | OpenTelemetry SDK integration (`opentelemetry-sdk`) |
+| `kafka` | `pip install "llm-toolkit-schema[kafka]"` | `EventStream.from_kafka()` via `kafka-python>=2.0` |
+| `langchain` | `pip install "llm-toolkit-schema[langchain]"` | `LLMSchemaCallbackHandler` via `langchain-core>=0.2` |
+| `llamaindex` | `pip install "llm-toolkit-schema[llamaindex]"` | `LLMSchemaEventHandler` via `llama-index-core>=0.10` |
+| `datadog` | `pip install "llm-toolkit-schema[datadog]"` | `DatadogExporter` (stdlib transport; reserved for future `ddtrace` integration) |
+| `all` | `pip install "llm-toolkit-schema[all]"` | All optional extras |
 
 Install all optional extras at once:
 
 ```bash
-pip install "llm-toolkit-schema[jsonschema,http,pydantic]"
+pip install "llm-toolkit-schema[all]"
 ```
 
 ## Development installation
@@ -44,7 +49,7 @@ all optional extras.
 
 ```python
 import llm_toolkit_schema
-print(llm_toolkit_schema.__version__)   # 1.0.0
+print(llm_toolkit_schema.__version__)   # 1.1.0
 print(llm_toolkit_schema.SCHEMA_VERSION)  # 1.0
 
 from llm_toolkit_schema import Event, EventType

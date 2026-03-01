@@ -11,4 +11,5 @@ whichever features your use case requires.
 - [PII Redaction](redaction.md)
 - [Compliance & Tenant Isolation](compliance.md)
 - [Export Backends & EventStream](export.md)
+- [Governance, Consumer Registry & Deprecations](governance.md)
 - [Migration Guide](migration.md)

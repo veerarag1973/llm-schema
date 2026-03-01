@@ -1,15 +1,17 @@
 # Export Backends & EventStream
 
-llm-toolkit-schema ships three export backends and an `EventStream`
+llm-toolkit-schema ships five export backends and an `EventStream`
 routing layer that ties them together.
 
 ## Quick overview
 
 | Class | Protocol | Typical use |
 |-------|----------|-------------|
-| `OTLPExporter` | OTLP / gRPC | OpenTelemetry collector, Grafana, Loki |
+| `OTLPExporter` | OTLP / HTTP JSON | OpenTelemetry collector, Grafana Tempo |
 | `WebhookExporter` | HTTPS POST | Slack, PagerDuty, or any custom HTTP endpoint |
 | `JSONLExporter` | Local file | Data-lake ingestion, offline analysis, tests |
+| `DatadogExporter` | Datadog Agent + API | Datadog APM traces and metrics |
+| `GrafanaLokiExporter` | Grafana Loki HTTP | Structured log aggregation in Grafana
 
 ## JSONLExporter
 
@@ -129,4 +131,112 @@ with JSONLExporter("events.jsonl") as exporter:
     for event in events:
         exporter.export(event)
 # flush + close called automatically
+```
+
+---
+
+## DatadogExporter
+
+Sends events to the Datadog Agent as APM trace spans, and optionally to the
+Datadog metrics API for numeric payload fields.
+
+```bash
+pip install "llm-toolkit-schema[datadog]"
+```
+
+```python
+from llm_toolkit_schema.export.datadog import DatadogExporter
+
+exporter = DatadogExporter(
+    service="llm-gateway",
+    env="production",
+    agent_url="http://dd-agent:8126",    # Datadog Agent
+    api_key="your-dd-api-key",           # Required for metrics
+)
+
+# Single event
+await exporter.export(event)
+
+# Batch
+await exporter.export_batch(events)
+```
+
+### Tag format
+
+All events are tagged with `service:<name>`, `env:<env>`, and `version:<ver>`.
+LLM metadata (source, org_id, team_id) is stored under `meta["llm.*"]` keys
+in the Datadog span.
+
+### Metric extraction
+
+Numeric fields in `event.payload` matching the built-in `_METRIC_FIELDS` set
+(`cost_usd`, `token_count`, `latency_ms`, `score`, etc.) are sent as Datadog
+metric series automatically.
+
+---
+
+## GrafanaLokiExporter
+
+Pushes events to a Grafana Loki instance via the HTTP push API.
+
+```python
+from llm_toolkit_schema.export.grafana import GrafanaLokiExporter
+
+exporter = GrafanaLokiExporter(
+    url="http://loki:3100",
+    labels={"env": "production", "app": "llm-gateway"},
+    include_envelope_labels=True,   # adds source, org_id, team_id as labels
+    tenant_id="my-org",             # sets X-Scope-OrgID
+)
+
+count = await exporter.export_batch(events)
+print(f"Pushed {count} events")
+```
+
+### Label sanitisation
+
+`event_type` dots are replaced with underscores for Loki label
+compatibility:
+
+```
+llm.trace.span.completed  →  llm_trace_span_completed
+```
+
+### Multi-tenant deployments
+
+Set `tenant_id` to add the `X-Scope-OrgID` header expected by Grafana
+Enterprise Loki multi-tenant configurations.
+
+### Fan-out with Loki + OTLP
+
+```python
+from llm_toolkit_schema.stream import EventStream
+from llm_toolkit_schema.export.otlp import OTLPExporter
+from llm_toolkit_schema.export.grafana import GrafanaLokiExporter
+
+stream = EventStream(events)
+await stream.route(OTLPExporter("http://otel-collector:4318/v1/traces"))
+await stream.route(GrafanaLokiExporter("http://loki:3100"))
+```
+
+---
+
+## Kafka source
+
+Load events from a Kafka topic directly into an `EventStream`:
+
+```bash
+pip install "llm-toolkit-schema[kafka]"
+```
+
+```python
+from llm_toolkit_schema.stream import EventStream
+
+stream = EventStream.from_kafka(
+    topic="llm-events",
+    bootstrap_servers="kafka:9092",
+    group_id="analytics",
+    max_messages=5000,
+)
+await stream.drain(exporter)
 ```
