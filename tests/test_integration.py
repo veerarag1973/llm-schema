@@ -103,7 +103,7 @@ class TestFullRoundTrip:
 class TestPublicApiExports:
     def test_version_present(self) -> None:
         assert hasattr(llm_schema, "__version__")
-        assert llm_schema.__version__.startswith("0.")
+        assert llm_schema.__version__.startswith("1.")
 
     def test_schema_version_constant(self) -> None:
         assert llm_schema.SCHEMA_VERSION == "1.0"

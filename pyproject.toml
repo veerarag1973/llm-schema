@@ -7,14 +7,14 @@ build-backend = "hatchling.build"
 # ---------------------------------------------------------------------------
 [project]
 name = "llm-schema"
-version = "0.5.0"
+version = "1.0.0"
 description = "The foundational shared event schema for the LLM Developer Toolkit"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "LLM Toolkit Team" }]
 keywords = ["llm", "schema", "opentelemetry", "events", "observability"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",

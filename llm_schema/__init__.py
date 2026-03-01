@@ -123,6 +123,11 @@ v0.5 — Namespace payload dataclasses for all 10 reserved namespaces
         (``llm_schema.namespaces``).  Published JSON Schema
         (``schemas/v1.0/schema.json``).  ``validate_event()`` for schema
         validation with optional ``jsonschema`` backend.
+v1.0 — Production-ready GA release.  Compliance toolkit
+        (``llm_schema.compliance``) with multi-tenant isolation checks,
+        audit chain integrity verification, and third-party compatibility
+        checker.  Migration scaffold ``llm_schema.migrate.v1_to_v2``.
+        ``llm-schema check-compat`` CLI command.
 """
 
 from llm_schema.event import SCHEMA_VERSION, Event, Tags
@@ -169,6 +174,19 @@ from llm_schema.ulid import validate as validate_ulid
 from llm_schema.export import JSONLExporter, OTLPExporter, ResourceAttributes, WebhookExporter
 from llm_schema.stream import EventStream, Exporter
 from llm_schema.validate import validate_event
+from llm_schema.compliance import (
+    CompatibilityResult,
+    CompatibilityViolation,
+    ChainIntegrityResult,
+    ChainIntegrityViolation,
+    IsolationResult,
+    IsolationViolation,
+    test_compatibility,
+    verify_chain_integrity,
+    verify_events_scoped,
+    verify_tenant_isolation,
+)
+from llm_schema.migrate import MigrationResult, v1_to_v2
 from llm_schema.namespaces import (
     # cache
     CacheEvictedPayload,
@@ -210,7 +228,7 @@ from llm_schema.namespaces import (
     ToolCall,
 )
 
-__version__: str = "0.5.0"
+__version__: str = "1.0.0"
 __all__: list[str] = [
     # Core
     "Event",
@@ -300,6 +318,20 @@ __all__: list[str] = [
     "ModelInfo",
     "ToolCall",
     "SpanCompletedPayload",
+    # Compliance toolkit (v1.0)
+    "test_compatibility",
+    "CompatibilityResult",
+    "CompatibilityViolation",
+    "verify_chain_integrity",
+    "ChainIntegrityResult",
+    "ChainIntegrityViolation",
+    "verify_tenant_isolation",
+    "verify_events_scoped",
+    "IsolationResult",
+    "IsolationViolation",
+    # Migration scaffold (v1.0)
+    "MigrationResult",
+    "v1_to_v2",
     # Metadata
     "__version__",
 ]
