@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 # Project metadata
 # ---------------------------------------------------------------------------
 [project]
-name = "llm-schema"
-version = "1.0.0"
+name = "llm-toolkit-schema"
+version = "1.0.1"
 description = "The foundational shared event schema for the LLM Developer Toolkit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Logging",
     "Typing :: Typed",
@@ -30,6 +31,13 @@ requires-python = ">=3.9"
 
 # Core has ZERO required dependencies — stdlib only.
 dependencies = []
+
+[project.urls]
+"Homepage" = "https://github.com/llm-toolkit/llm-toolkit-schema"
+"Documentation" = "https://llm-toolkit-schema.readthedocs.io"
+"Source" = "https://github.com/llm-toolkit/llm-toolkit-schema"
+"Bug Tracker" = "https://github.com/llm-toolkit/llm-toolkit-schema/issues"
+"Changelog" = "https://llm-toolkit-schema.readthedocs.io/en/latest/changelog.html"
 
 [project.optional-dependencies]
 dev = [
@@ -50,15 +58,19 @@ pydantic = ["pydantic>=2.7"]
 otel    = ["opentelemetry-sdk>=1.24"]
 http    = ["httpx>=0.27"]
 jsonschema = ["jsonschema>=4.21"]
+docs = [
+    "sphinx>=7.0",
+    "pydata-sphinx-theme>=0.15",
+]
 
 [project.scripts]
-llm-schema = "llm_schema._cli:main"
+llm-toolkit-schema = "llm_toolkit_schema._cli:main"
 
 # ---------------------------------------------------------------------------
 # Hatch build
 # ---------------------------------------------------------------------------
 [tool.hatch.build.targets.wheel]
-packages = ["llm_schema"]
+packages = ["llm_toolkit_schema"]
 
 # ---------------------------------------------------------------------------
 # Pytest
@@ -69,7 +81,7 @@ addopts       = [
     "--strict-markers",
     "--tb=short",
     "-ra",
-    "--cov=llm_schema",
+    "--cov=llm_toolkit_schema",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-fail-under=100",
@@ -87,8 +99,8 @@ filterwarnings = ["error"]   # treat all warnings as errors
 # ---------------------------------------------------------------------------
 [tool.coverage.run]
 branch   = true
-source   = ["llm_schema"]
-omit     = ["llm_schema/_cli.py"]   # CLI scaffolded but not in Phase 1 scope
+source   = ["llm_toolkit_schema"]
+omit     = ["llm_toolkit_schema/_cli.py"]   # CLI scaffolded but not in Phase 1 scope
 
 [tool.coverage.report]
 exclude_lines = [
@@ -106,7 +118,7 @@ fail_under   = 100
 [tool.ruff]
 target-version = "py39"
 line-length    = 100
-src            = ["llm_schema", "tests"]
+src            = ["llm_toolkit_schema", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -145,7 +157,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.isort]
-known-first-party = ["llm_schema"]
+known-first-party = ["llm_toolkit_schema"]
 
 # ---------------------------------------------------------------------------
 # Mypy — strict type checking
@@ -161,4 +173,4 @@ disallow_untyped_defs  = true
 no_implicit_reexport   = true
 show_error_codes       = true
 pretty                 = true
-packages               = ["llm_schema"]
+packages               = ["llm_toolkit_schema"]

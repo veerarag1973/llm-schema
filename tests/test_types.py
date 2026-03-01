@@ -1,4 +1,4 @@
-"""Tests for llm_schema.types — EventType enum and namespace helpers.
+"""Tests for llm_toolkit_schema.types — EventType enum and namespace helpers.
 
 100% coverage target.
 """
@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from llm_schema.exceptions import EventTypeError
-from llm_schema.types import (
+from llm_toolkit_schema.exceptions import EventTypeError
+from llm_toolkit_schema.types import (
     EVENT_TYPE_PATTERN,
     EventType,
     _RESERVED_NAMESPACES,

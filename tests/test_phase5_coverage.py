@@ -18,29 +18,29 @@ from __future__ import annotations
 import pytest
 
 # ── cache ─────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.cache import CacheEvictedPayload, CacheHitPayload, CacheMissPayload
+from llm_toolkit_schema.namespaces.cache import CacheEvictedPayload, CacheHitPayload, CacheMissPayload
 
 # ── cost ──────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.cost import BudgetThresholdPayload, CostRecordedPayload
+from llm_toolkit_schema.namespaces.cost import BudgetThresholdPayload, CostRecordedPayload
 
 # ── diff ──────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.diff import DiffComparisonPayload, DiffReportPayload
+from llm_toolkit_schema.namespaces.diff import DiffComparisonPayload, DiffReportPayload
 
 # ── eval_ ─────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.eval_ import EvalRegressionPayload, EvalScenarioPayload
+from llm_toolkit_schema.namespaces.eval_ import EvalRegressionPayload, EvalScenarioPayload
 
 # ── fence ─────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.fence import (
+from llm_toolkit_schema.namespaces.fence import (
     FenceValidationFailedPayload,
     RetryTriggeredPayload,
     ValidationPassedPayload,
 )
 
 # ── guard ─────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload
+from llm_toolkit_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload
 
 # ── prompt ────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.prompt import (
+from llm_toolkit_schema.namespaces.prompt import (
     PromptApprovedPayload,
     PromptPromotedPayload,
     PromptRolledBackPayload,
@@ -48,22 +48,22 @@ from llm_schema.namespaces.prompt import (
 )
 
 # ── redact ────────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.redact import (
+from llm_toolkit_schema.namespaces.redact import (
     PIIDetectedPayload,
     PIIRedactedPayload,
     ScanCompletedPayload,
 )
 
 # ── template ──────────────────────────────────────────────────────────────────
-from llm_schema.namespaces.template import (
+from llm_toolkit_schema.namespaces.template import (
     TemplateRenderedPayload,
     TemplateValidationFailedPayload,
     VariableMissingPayload,
 )
 
 # ── validate ──────────────────────────────────────────────────────────────────
-from llm_schema.exceptions import SchemaValidationError
-from llm_schema.validate import _stdlib_validate
+from llm_toolkit_schema.exceptions import SchemaValidationError
+from llm_toolkit_schema.validate import _stdlib_validate
 
 
 # ===========================================================================
@@ -1092,8 +1092,8 @@ class TestStdlibValidateMinLengthCoverage:
     def test_schema_version_too_short_raises(self):
         """A schema_version that is too short (e.g. empty string) triggers the
         min_length guard (validate.py line 138)."""
-        from llm_schema.event import Event
-        from llm_schema.types import EventType
+        from llm_toolkit_schema.event import Event
+        from llm_toolkit_schema.types import EventType
 
         # Build a valid doc then replace schema_version with a too-short string.
         event = Event(
@@ -1110,7 +1110,7 @@ class TestStdlibValidateMinLengthCoverage:
         # shorter than the real min_length by bypassing the pattern check first.
         # The _check_string_field signature: (doc, field, required, min_length, pattern)
         # Calling it directly lets us control all parameters.
-        from llm_schema.validate import _stdlib_validate
+        from llm_toolkit_schema.validate import _stdlib_validate
 
         doc["schema_version"] = " "  # 1-char whitespace; passes isinstance, fails pattern
         # This will actually fail the *pattern* check, not the min_length check,
@@ -1134,7 +1134,7 @@ class TestStdlibValidateMinLengthCoverage:
         # To specifically hit the min_length raise we need min_length > len(value).
         # The _check_string_field function is internal; let's use it via module import.
         import re
-        from llm_schema.validate import _stdlib_validate as _sv
+        from llm_toolkit_schema.validate import _stdlib_validate as _sv
 
         # Build a doc where schema_version is present but only 1 char long.
         # The min_length for schema_version in the stdlib validator is 3 ("1.0").
@@ -1148,9 +1148,9 @@ class TestStdlibValidateMinLengthCoverage:
 
     def test_source_too_short_raises(self):
         """A source string that is extremely short triggers min_length (line 138)."""
-        from llm_schema.event import Event
-        from llm_schema.types import EventType
-        from llm_schema.validate import _stdlib_validate
+        from llm_toolkit_schema.event import Event
+        from llm_toolkit_schema.types import EventType
+        from llm_toolkit_schema.validate import _stdlib_validate
 
         event = Event(
             event_type=EventType.TRACE_SPAN_COMPLETED,
@@ -1483,8 +1483,8 @@ class TestStdlibMinLengthRaise:
 
     def test_empty_schema_version_triggers_min_length(self):
         """Setting schema_version to '' (length 0 < min_length 1) hits line 138."""
-        from llm_schema.event import Event
-        from llm_schema.types import EventType
+        from llm_toolkit_schema.event import Event
+        from llm_toolkit_schema.types import EventType
 
         event = Event(
             event_type=EventType.TRACE_SPAN_COMPLETED,
@@ -1507,8 +1507,8 @@ class TestStdlibMinLengthRaise:
         Must use a fully valid source string so that all required-field
         checks pass and the validator reaches the optional context fields.
         """
-        from llm_schema.event import Event
-        from llm_schema.types import EventType
+        from llm_toolkit_schema.event import Event
+        from llm_toolkit_schema.types import EventType
 
         # source="llm-trace@0.3.1" matches _SOURCE_RE so all required
         # fields pass and we reach the optional context-field validation.

@@ -1,4 +1,4 @@
-"""Tests for llm_schema.redact — PII redaction framework.
+"""Tests for llm_toolkit_schema.redact — PII redaction framework.
 
 100% branch coverage target.
 """
@@ -10,8 +10,8 @@ from typing import Any, Dict
 
 import pytest
 
-from llm_schema import Event, EventType
-from llm_schema.redact import (
+from llm_toolkit_schema import Event, EventType
+from llm_toolkit_schema.redact import (
     PIINotRedactedError,
     PII_TYPES,
     Redactable,
@@ -181,8 +181,8 @@ class TestRedactable:
 
 @pytest.mark.unit
 class TestPIINotRedactedError:
-    def test_is_llm_schema_error(self) -> None:
-        from llm_schema.exceptions import LLMSchemaError
+    def test_is_llm_toolkit_schema_error(self) -> None:
+        from llm_toolkit_schema.exceptions import LLMSchemaError
         err = PIINotRedactedError(count=2)
         assert isinstance(err, LLMSchemaError)
 
@@ -380,7 +380,7 @@ class TestRedactionPolicyApply:
         assert result.event.span_id == "b" * 16
 
     def test_tags_preserved(self) -> None:
-        from llm_schema.event import Tags
+        from llm_toolkit_schema.event import Tags
         policy = RedactionPolicy()
         event = Event(
             event_type=EventType.PROMPT_SAVED,

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://llm-schema.dev/schemas/v1.0/schema.json",
-  "title": "llm-schema Event Envelope",
-  "description": "Canonical JSON Schema for the llm-schema v1.0 Event envelope.  Every event emitted by a tool in the LLM Developer Toolkit must validate against this schema.",
+  "$id": "https://llm-toolkit-schema.dev/schemas/v1.0/schema.json",
+  "title": "llm-toolkit-schema Event Envelope",
+  "description": "Canonical JSON Schema for the llm-toolkit-schema v1.0 Event envelope.  Every event emitted by a tool in the LLM Developer Toolkit must validate against this schema.",
   "type": "object",
   "required": [
     "schema_version",

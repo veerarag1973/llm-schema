@@ -1,4 +1,4 @@
-"""Tests for the llm_schema.compliance package.
+"""Tests for the llm_toolkit_schema.compliance package.
 
 Covers:
 - compliance.test_isolation  (IsolationViolation, IsolationResult,
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from llm_schema import Event, EventType
-from llm_schema.compliance import (
+from llm_toolkit_schema import Event, EventType
+from llm_toolkit_schema.compliance import (
     CompatibilityResult,
     CompatibilityViolation,
     ChainIntegrityResult,
@@ -27,11 +27,11 @@ from llm_schema.compliance import (
     verify_events_scoped,
     verify_tenant_isolation,
 )
-from llm_schema.compliance._compat import _check_event
-from llm_schema.compliance.test_chain import _check_monotonic_timestamps
-from llm_schema.compliance.test_isolation import _check_org_disjoint
-from llm_schema.signing import AuditStream
-from llm_schema.ulid import generate as gen_ulid
+from llm_toolkit_schema.compliance._compat import _check_event
+from llm_toolkit_schema.compliance.test_chain import _check_monotonic_timestamps
+from llm_toolkit_schema.compliance.test_isolation import _check_org_disjoint
+from llm_toolkit_schema.signing import AuditStream
+from llm_toolkit_schema.ulid import generate as gen_ulid
 
 
 # ---------------------------------------------------------------------------

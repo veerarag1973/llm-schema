@@ -35,7 +35,7 @@ repos:
           - pytest>=8.0
         args: [--strict]
         pass_filenames: false
-        entry: mypy llm_schema tests
+        entry: mypy llm_toolkit_schema tests
 
   # ── Validate pyproject.toml structure ─────────────────────────────────────
   - repo: https://github.com/abravalheri/validate-pyproject

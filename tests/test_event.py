@@ -1,4 +1,4 @@
-"""Tests for llm_schema.event — Event, Tags, and helpers.
+"""Tests for llm_toolkit_schema.event — Event, Tags, and helpers.
 
 100% branch and line coverage target.
 """
@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from llm_schema.event import (
+from llm_toolkit_schema.event import (
     SCHEMA_VERSION,
     Event,
     Tags,
@@ -31,13 +31,13 @@ from llm_schema.event import (
     _validate_timestamp,
     _validate_ulid_field,
 )
-from llm_schema.exceptions import (
+from llm_toolkit_schema.exceptions import (
     DeserializationError,
     SchemaValidationError,
     SerializationError,
 )
-from llm_schema.types import EventType
-from llm_schema.ulid import generate as gen_ulid
+from llm_toolkit_schema.types import EventType
+from llm_toolkit_schema.ulid import generate as gen_ulid
 
 from tests.conftest import FIXED_SPAN_ID, FIXED_TIMESTAMP, FIXED_TRACE_ID
 
@@ -143,7 +143,7 @@ class TestEventConstruction:
             timestamp=FIXED_TIMESTAMP,
         )
         assert len(event.event_id) == 26  # noqa: PLR2004
-        from llm_schema.ulid import validate
+        from llm_toolkit_schema.ulid import validate
         assert validate(event.event_id)
 
     def test_auto_timestamp(self) -> None:

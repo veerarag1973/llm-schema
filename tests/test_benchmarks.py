@@ -17,9 +17,9 @@ import time
 
 import pytest
 
-from llm_schema import Event, EventType
-from llm_schema.export.otlp import _event_to_attributes
-from llm_schema.signing import sign
+from llm_toolkit_schema import Event, EventType
+from llm_toolkit_schema.export.otlp import _event_to_attributes
+from llm_toolkit_schema.signing import sign
 
 # ---------------------------------------------------------------------------
 # Shared helpers

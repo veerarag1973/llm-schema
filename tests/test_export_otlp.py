@@ -1,4 +1,4 @@
-"""Tests for llm_schema/export/otlp.py — OTLPExporter.
+"""Tests for llm_toolkit_schema/export/otlp.py — OTLPExporter.
 
 Coverage targets
 ----------------
@@ -24,9 +24,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from llm_schema.event import Event, Tags
-from llm_schema.exceptions import ExportError
-from llm_schema.export.otlp import (
+from llm_toolkit_schema.event import Event, Tags
+from llm_toolkit_schema.exceptions import ExportError
+from llm_toolkit_schema.export.otlp import (
     OTLPExporter,
     ResourceAttributes,
     _derive_span_id,
@@ -405,7 +405,7 @@ class TestOTLPExporterInit:
 
     def test_default_resource_attrs_set(self) -> None:
         exp = OTLPExporter("http://localhost")
-        assert exp._resource_attrs.service_name == "llm-schema"
+        assert exp._resource_attrs.service_name == "llm-toolkit-schema"
 
 
 # ---------------------------------------------------------------------------
@@ -537,13 +537,13 @@ class TestWrapHelpers:
         exp = _make_exporter()
         result = exp._wrap_spans([])
         scope = result["resourceSpans"][0]["scopeSpans"][0]["scope"]
-        assert scope["name"] == "llm-schema"
+        assert scope["name"] == "llm-toolkit-schema"
 
     def test_wrap_logs_includes_scope_name(self) -> None:
         exp = _make_exporter()
         result = exp._wrap_logs([])
         scope = result["resourceLogs"][0]["scopeLogs"][0]["scope"]
-        assert scope["name"] == "llm-schema"
+        assert scope["name"] == "llm-toolkit-schema"
 
     def test_wrap_spans_resource_uses_configured_attrs(self) -> None:
         ra = ResourceAttributes(service_name="my-svc")

@@ -1,4 +1,4 @@
-"""Tests for llm_schema.migrate.
+"""Tests for llm_toolkit_schema.migrate.
 
 Covers:
 - MigrationResult dataclass (creation, field access, immutability)
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from llm_schema.migrate import MigrationResult, v1_to_v2
-from llm_schema import Event, EventType
+from llm_toolkit_schema.migrate import MigrationResult, v1_to_v2
+from llm_toolkit_schema import Event, EventType
 
 
 # ---------------------------------------------------------------------------

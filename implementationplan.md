@@ -1,13 +1,13 @@
-# llm-schema — Implementation Plan
+# llm-toolkit-schema — Implementation Plan
 **Enterprise Product Specification v1.0 | February 2026**
 
-> **The One Rule:** Do not start building `promptlock`, `llm-trace`, or any other tool until `llm-schema v0.5` is complete and all namespace payload schemas are defined and reviewed.
+> **The One Rule:** Do not start building `promptlock`, `llm-trace`, or any other tool until `llm-toolkit-schema v0.5` is complete and all namespace payload schemas are defined and reviewed.
 
 ---
 
 ## Overview
 
-`llm-schema` is the foundational shared event contract for the entire LLM Developer Toolkit. It transforms 17 independent utilities into a composable ecosystem by providing an OpenTelemetry-compatible, versioned, enterprise-grade event schema.
+`llm-toolkit-schema` is the foundational shared event contract for the entire LLM Developer Toolkit. It transforms 17 independent utilities into a composable ecosystem by providing an OpenTelemetry-compatible, versioned, enterprise-grade event schema.
 
 **Build Order:** #1 — Before Everything  
 **Language:** Python 3.9+  
@@ -24,10 +24,10 @@
 | Task | Details |
 |------|---------|
 | Repository setup | `pyproject.toml`, CI pipeline, linting, type-checking |
-| `llm_schema/event.py` | Base `Event` dataclass with all envelope fields |
-| `llm_schema/types.py` | `EventType` enum with all namespaced event type strings |
-| `llm_schema/ulid.py` | ULID generation — zero external dependencies |
-| `llm_schema/__init__.py` | Public API: `Event`, `EventType`, `Tags` |
+| `llm_toolkit_schema/event.py` | Base `Event` dataclass with all envelope fields |
+| `llm_toolkit_schema/types.py` | `EventType` enum with all namespaced event type strings |
+| `llm_toolkit_schema/ulid.py` | ULID generation — zero external dependencies |
+| `llm_toolkit_schema/__init__.py` | Public API: `Event`, `EventType`, `Tags` |
 | JSON serialisation | Canonical, deterministic `event.to_json()` — same event always produces same JSON |
 | Basic validation | Field presence checks; typed `SchemaValidationError` exceptions — no bare raises |
 | Unit tests | 100% coverage on `Event` creation, serialisation, and validation |
@@ -63,7 +63,7 @@ OPTIONAL: trace_id, span_id, parent_span_id, org_id, team_id, actor_id, session_
 
 | Task | Details |
 |------|---------|
-| `llm_schema/redact.py` | `Redactable`, `RedactionPolicy`, `Sensitivity` levels |
+| `llm_toolkit_schema/redact.py` | `Redactable`, `RedactionPolicy`, `Sensitivity` levels |
 | Pydantic model layer | Pydantic v2 models wrapping all envelope and payload fields |
 | Redaction flow | `__redactable`, `__sensitivity`, `__pii_types` marker support |
 | `policy.apply(event)` | Scrubs content; preserves structure; records `__redacted_at`, `__redacted_by` |
@@ -99,7 +99,7 @@ OPTIONAL: trace_id, span_id, parent_span_id, org_id, team_id, actor_id, session_
 
 | Task | Details |
 |------|---------|
-| `llm_schema/signing.py` | `sign()`, `verify()`, `verify_chain()` |
+| `llm_toolkit_schema/signing.py` | `sign()`, `verify()`, `verify_chain()` |
 | Checksum computation | `checksum = SHA-256` of canonical JSON of `payload` |
 | Chain signature | `signature = HMAC-SHA256(event_id + checksum + prev_id, org_secret)` |
 | `AuditStream` class | Sequential event stream with chain linkage via `prev_id` |
@@ -113,7 +113,7 @@ OPTIONAL: trace_id, span_id, parent_span_id, org_id, team_id, actor_id, session_
 ### Signing Algorithm
 
 ```python
-from llm_schema.audit import verify_chain
+from llm_toolkit_schema.audit import verify_chain
 result = verify_chain(events, org_secret='...')
 # result.valid          → True/False
 # result.first_tampered → event_id of first modified event, or None
@@ -137,10 +137,10 @@ result = verify_chain(events, org_secret='...')
 
 | Task | Details |
 |------|---------|
-| `llm_schema/export/otlp.py` | `OTLPExporter` — serialises events to OTLP spans or log records |
-| `llm_schema/export/webhook.py` | `WebhookExporter` with HMAC-SHA256 request signing |
-| `llm_schema/export/jsonl.py` | JSONL file exporter for local development |
-| `llm_schema/stream.py` | `EventStream`: `from_file()`, `from_queue()`, `filter()`, `route()` |
+| `llm_toolkit_schema/export/otlp.py` | `OTLPExporter` — serialises events to OTLP spans or log records |
+| `llm_toolkit_schema/export/webhook.py` | `WebhookExporter` with HMAC-SHA256 request signing |
+| `llm_toolkit_schema/export/jsonl.py` | JSONL file exporter for local development |
+| `llm_toolkit_schema/stream.py` | `EventStream`: `from_file()`, `from_queue()`, `filter()`, `route()` |
 | OTLP mapping | Every event maps to a valid OTLP span or log record — no custom code needed |
 | Resource attributes | `service.name`, `deployment.environment` support in exporter config |
 | Async export | Exporters are async by default — no blocking on tool's critical path |
@@ -160,7 +160,7 @@ result = verify_chain(events, org_secret='...')
 
 ### Exit Criteria
 
-- A llm-schema event can be exported to Datadog and Grafana without custom adapter code
+- A llm-toolkit-schema event can be exported to Datadog and Grafana without custom adapter code
 - `EventStream.route()` supports filtering by `event_type` and `tags`
 - All exporters are opt-in (no network calls in core)
 
@@ -174,18 +174,18 @@ result = verify_chain(events, org_secret='...')
 
 | Task | Details |
 |------|---------|
-| `llm_schema/namespaces/diff.py` | `DiffComparisonPayload`, `DiffReportPayload` |
-| `llm_schema/namespaces/prompt.py` | `PromptSavedPayload`, `PromptPromotedPayload`, `PromptApprovedPayload`, `PromptRolledBackPayload` |
-| `llm_schema/namespaces/trace.py` | `SpanCompletedPayload`, `ToolCall`, `ModelInfo`, `TokenUsage` |
-| `llm_schema/namespaces/cost.py` | `CostRecordedPayload`, `BudgetThresholdPayload` |
-| `llm_schema/namespaces/eval_.py` | `EvalScenarioPayload`, `EvalRegressionPayload` |
-| `llm_schema/namespaces/guard.py` | `GuardBlockedPayload`, `GuardFlaggedPayload` |
-| `llm_schema/namespaces/redact.py` | `PIIDetectedPayload`, `PIIRedactedPayload`, `ScanCompletedPayload` |
-| `llm_schema/namespaces/cache.py` | `CacheHitPayload`, `CacheMissPayload`, `CacheEvictedPayload` |
-| `llm_schema/namespaces/template.py` | `TemplateRenderedPayload`, `VariableMissingPayload`, `ValidationFailedPayload` |
-| `llm_schema/namespaces/fence.py` | `ValidationPassedPayload`, `ValidationFailedPayload`, `RetryTriggeredPayload` |
+| `llm_toolkit_schema/namespaces/diff.py` | `DiffComparisonPayload`, `DiffReportPayload` |
+| `llm_toolkit_schema/namespaces/prompt.py` | `PromptSavedPayload`, `PromptPromotedPayload`, `PromptApprovedPayload`, `PromptRolledBackPayload` |
+| `llm_toolkit_schema/namespaces/trace.py` | `SpanCompletedPayload`, `ToolCall`, `ModelInfo`, `TokenUsage` |
+| `llm_toolkit_schema/namespaces/cost.py` | `CostRecordedPayload`, `BudgetThresholdPayload` |
+| `llm_toolkit_schema/namespaces/eval_.py` | `EvalScenarioPayload`, `EvalRegressionPayload` |
+| `llm_toolkit_schema/namespaces/guard.py` | `GuardBlockedPayload`, `GuardFlaggedPayload` |
+| `llm_toolkit_schema/namespaces/redact.py` | `PIIDetectedPayload`, `PIIRedactedPayload`, `ScanCompletedPayload` |
+| `llm_toolkit_schema/namespaces/cache.py` | `CacheHitPayload`, `CacheMissPayload`, `CacheEvictedPayload` |
+| `llm_toolkit_schema/namespaces/template.py` | `TemplateRenderedPayload`, `VariableMissingPayload`, `ValidationFailedPayload` |
+| `llm_toolkit_schema/namespaces/fence.py` | `ValidationPassedPayload`, `ValidationFailedPayload`, `RetryTriggeredPayload` |
 | `schemas/v1.0/schema.json` | Published JSON Schema — stable URL |
-| `llm_schema/validate.py` | JSON Schema validation against published spec |
+| `llm_toolkit_schema/validate.py` | JSON Schema validation against published spec |
 | Design review | All 17 tool authors must review their namespace payload before freeze |
 
 ### Namespace Registry
@@ -221,11 +221,11 @@ result = verify_chain(events, org_secret='...')
 
 | Task | Details |
 |------|---------|
-| `llm_schema/compliance/test_isolation.py` | Multi-tenant data isolation verification test suite |
-| `llm_schema/compliance/test_chain.py` | Audit chain integrity test suite |
-| `llm_schema/migrate.py` | `v1_to_v2()` migration helper scaffold |
+| `llm_toolkit_schema/compliance/test_isolation.py` | Multi-tenant data isolation verification test suite |
+| `llm_toolkit_schema/compliance/test_chain.py` | Audit chain integrity test suite |
+| `llm_toolkit_schema/migrate.py` | `v1_to_v2()` migration helper scaffold |
 | Schema registry | Live at `https://schema.llm-toolkit.dev` — JSON Schema per version, deprecation notices |
-| Compatibility checker | `llm-schema check-compat --consumer promptlock --schema-version 1.2` |
+| Compatibility checker | `llm-toolkit-schema check-compat --consumer promptlock --schema-version 1.2` |
 | Signed PyPI release | Sigstore-signed package; SBOM published per release |
 | Dependency audit | CI audit on every PR |
 | Performance benchmarks | All NFR targets validated in CI (see below) |
@@ -269,7 +269,7 @@ result = verify_chain(events, org_secret='...')
 
 | Task | Details |
 |------|---------|
-| `llm_schema/export/datadog.py` | Datadog-specific metric + trace exporter |
+| `llm_toolkit_schema/export/datadog.py` | Datadog-specific metric + trace exporter |
 | Grafana / Loki exporter | Spans → distributed traces; Events → Loki logs |
 | Kafka `EventStream` | `EventStream.from_kafka()` for high-throughput pipelines |
 | Consumer registration API | Tools declare consumed versions/namespaces; registry alerts on breaking changes |
@@ -294,15 +294,15 @@ result = verify_chain(events, org_secret='...')
 
 | Task | Details |
 |------|---------|
-| LangChain integration package | `llm-schema-langchain` — emits `llm.trace.*` events from LangChain callbacks |
-| LlamaIndex integration package | `llm-schema-llamaindex` — emits events from LlamaIndex query/retrieval pipeline |
+| LangChain integration package | `llm-toolkit-schema-langchain` — emits `llm.trace.*` events from LangChain callbacks |
+| LlamaIndex integration package | `llm-toolkit-schema-llamaindex` — emits events from LlamaIndex query/retrieval pipeline |
 | Private registry | Enterprise private mirror with firewall deployment support |
 | Deprecation tooling | CLI + CI tooling to detect usage of deprecated event types |
 | Schema pinning | Enterprise orgs mandate a specific schema version across all tools |
 
 ### Ecosystem Goal
 
-> Every major LLM framework (LangChain, LlamaIndex, AutoGen, DSPy) should emit llm-schema events by v1.2. Budget **one sprint per framework** for integration support.
+> Every major LLM framework (LangChain, LlamaIndex, AutoGen, DSPy) should emit llm-toolkit-schema events by v1.2. Budget **one sprint per framework** for integration support.
 
 ### Success Metrics at Month 5
 
@@ -324,7 +324,7 @@ result = verify_chain(events, org_secret='...')
 1. Collect breaking-change proposals from v1.x feedback (tracked publicly)
 2. Design review with all 17 tool authors and enterprise design partners
 3. Publish deprecation notices 6 months before v2.0 release
-4. Publish `llm_schema.migrate.v1_to_v2(event)` migration helpers
+4. Publish `llm_toolkit_schema.migrate.v1_to_v2(event)` migration helpers
 5. Run 6-month parallel support window (v1.x and v2.x both supported)
 
 ### Versioning Rules (enforced across all phases)
@@ -355,12 +355,12 @@ result = verify_chain(events, org_secret='...')
 
 ## Third-Party Adoption Checklist
 
-For any external tool to be compatible with llm-schema:
+For any external tool to be compatible with llm-toolkit-schema:
 
 1. All REQUIRED envelope fields present and correctly typed
 2. Uses a registered namespace or private `x.*` prefix (e.g. `x.mycompany.trace.*`)
 3. Does not emit events in another tool's namespace without explicit permission
-4. Passes: `llm_schema.compliance.test_compatibility`
+4. Passes: `llm_toolkit_schema.compliance.test_compatibility`
 5. Includes `schema_version` in every event — never omitted
 6. Adoption time for a simple tool: **< 2 hours**
 
@@ -382,4 +382,4 @@ For any external tool to be compatible with llm-schema:
 
 ---
 
-*llm-schema · Enterprise Product Specification · v1.0 · February 2026 · Confidential*
+*llm-toolkit-schema · Enterprise Product Specification · v1.0 · February 2026 · Confidential*

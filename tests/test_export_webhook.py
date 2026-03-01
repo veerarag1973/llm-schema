@@ -1,4 +1,4 @@
-"""Tests for llm_schema/export/webhook.py — WebhookExporter.
+"""Tests for llm_toolkit_schema/export/webhook.py — WebhookExporter.
 
 Coverage targets
 ----------------
@@ -24,9 +24,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from llm_schema.event import Event
-from llm_schema.exceptions import ExportError
-from llm_schema.export.webhook import (
+from llm_toolkit_schema.event import Event
+from llm_toolkit_schema.exceptions import ExportError
+from llm_toolkit_schema.export.webhook import (
     WebhookExporter,
     _SIGNATURE_HEADER,
     _sign_body,
@@ -210,7 +210,7 @@ class TestExportSingleEvent:
             asyncio.run(exp.export(event))
 
         req = captured[0]
-        # urllib.Request stores headers with capitalize(): "X-LLM-Schema-Signature" → "X-llm-schema-signature"
+        # urllib.Request stores headers with capitalize(): "X-llm-toolkit-schema-Signature" → "X-llm-toolkit-schema-signature"
         sig_key = _SIGNATURE_HEADER.capitalize()
         sig_header = req.headers.get(sig_key)
         assert sig_header is not None
@@ -359,7 +359,7 @@ class TestRetryLogic:
             return _mock_urlopen_success()
 
         with patch("urllib.request.urlopen", side_effect=_fake):
-            with patch("llm_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
+            with patch("llm_toolkit_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
                 asyncio.run(exp.export(event))
 
         assert call_count == 3
@@ -380,7 +380,7 @@ class TestRetryLogic:
             return _mock_urlopen_success()
 
         with patch("urllib.request.urlopen", side_effect=_fake):
-            with patch("llm_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
+            with patch("llm_toolkit_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
                 asyncio.run(exp.export(event))
 
         assert call_count == 2
@@ -417,7 +417,7 @@ class TestRetryLogic:
             raise OSError("persistent failure")
 
         with patch("urllib.request.urlopen", side_effect=_fake):
-            with patch("llm_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
+            with patch("llm_toolkit_schema.export.webhook.asyncio.sleep", new_callable=AsyncMock):
                 with pytest.raises(ExportError) as exc_info:
                     asyncio.run(exp.export(event))
 

@@ -9,9 +9,9 @@ import json
 
 import pytest
 
-import llm_schema
-from llm_schema import Event, EventType, Tags, generate_ulid, validate_ulid
-from llm_schema.exceptions import LLMSchemaError
+import llm_toolkit_schema
+from llm_toolkit_schema import Event, EventType, Tags, generate_ulid, validate_ulid
+from llm_toolkit_schema.exceptions import LLMSchemaError
 
 from tests.conftest import FIXED_TIMESTAMP
 
@@ -102,16 +102,16 @@ class TestFullRoundTrip:
 @pytest.mark.integration
 class TestPublicApiExports:
     def test_version_present(self) -> None:
-        assert hasattr(llm_schema, "__version__")
-        assert llm_schema.__version__.startswith("1.")
+        assert hasattr(llm_toolkit_schema, "__version__")
+        assert llm_toolkit_schema.__version__.startswith("1.")
 
     def test_schema_version_constant(self) -> None:
-        assert llm_schema.SCHEMA_VERSION == "1.0"
+        assert llm_toolkit_schema.SCHEMA_VERSION == "1.0"
 
     def test_all_exceptions_exported(self) -> None:
-        assert issubclass(llm_schema.SchemaValidationError, llm_schema.LLMSchemaError)
-        assert issubclass(llm_schema.ULIDError, llm_schema.LLMSchemaError)
-        assert issubclass(llm_schema.SerializationError, llm_schema.LLMSchemaError)
+        assert issubclass(llm_toolkit_schema.SchemaValidationError, llm_toolkit_schema.LLMSchemaError)
+        assert issubclass(llm_toolkit_schema.ULIDError, llm_toolkit_schema.LLMSchemaError)
+        assert issubclass(llm_toolkit_schema.SerializationError, llm_toolkit_schema.LLMSchemaError)
 
     def test_generate_ulid_public(self) -> None:
         ulid = generate_ulid()
@@ -120,8 +120,8 @@ class TestPublicApiExports:
 
 @pytest.mark.integration
 class TestErrorPropagation:
-    def test_all_errors_catchable_as_llm_schema_error(self) -> None:
-        """The unified catch pattern must work for all llm_schema exceptions."""
+    def test_all_errors_catchable_as_llm_toolkit_schema_error(self) -> None:
+        """The unified catch pattern must work for all llm_toolkit_schema exceptions."""
         bad_event = Event(
             event_type="bad-event-type",
             source="bad-source",

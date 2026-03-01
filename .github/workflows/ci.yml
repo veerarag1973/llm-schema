@@ -42,7 +42,7 @@ jobs:
         run: ruff format --check .
 
       - name: Run mypy (strict)
-        run: mypy llm_schema tests
+        run: mypy llm_toolkit_schema tests
 
   # ──────────────────────────────────────────────────────────────────────────
   # Test matrix (3.9 → 3.12)
@@ -81,7 +81,7 @@ jobs:
           --tb=short
           --strict-markers
           -v
-          --cov=llm_schema
+          --cov=llm_toolkit_schema
           --cov-report=term-missing
           --cov-report=xml:coverage.xml
           --cov-fail-under=100

@@ -20,7 +20,7 @@ import pytest
 # ============================================================
 # trace
 # ============================================================
-from llm_schema.namespaces.trace import (
+from llm_toolkit_schema.namespaces.trace import (
     ModelInfo,
     SpanCompletedPayload,
     TokenUsage,
@@ -30,12 +30,12 @@ from llm_schema.namespaces.trace import (
 # ============================================================
 # diff
 # ============================================================
-from llm_schema.namespaces.diff import DiffComparisonPayload, DiffReportPayload
+from llm_toolkit_schema.namespaces.diff import DiffComparisonPayload, DiffReportPayload
 
 # ============================================================
 # prompt
 # ============================================================
-from llm_schema.namespaces.prompt import (
+from llm_toolkit_schema.namespaces.prompt import (
     PromptApprovedPayload,
     PromptPromotedPayload,
     PromptRolledBackPayload,
@@ -45,22 +45,22 @@ from llm_schema.namespaces.prompt import (
 # ============================================================
 # cost
 # ============================================================
-from llm_schema.namespaces.cost import BudgetThresholdPayload, CostRecordedPayload
+from llm_toolkit_schema.namespaces.cost import BudgetThresholdPayload, CostRecordedPayload
 
 # ============================================================
 # eval_
 # ============================================================
-from llm_schema.namespaces.eval_ import EvalRegressionPayload, EvalScenarioPayload
+from llm_toolkit_schema.namespaces.eval_ import EvalRegressionPayload, EvalScenarioPayload
 
 # ============================================================
 # guard
 # ============================================================
-from llm_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload
+from llm_toolkit_schema.namespaces.guard import GuardBlockedPayload, GuardFlaggedPayload
 
 # ============================================================
 # redact (namespace submodule)
 # ============================================================
-from llm_schema.namespaces.redact import (
+from llm_toolkit_schema.namespaces.redact import (
     PIIDetectedPayload,
     PIIRedactedPayload,
     ScanCompletedPayload,
@@ -69,12 +69,12 @@ from llm_schema.namespaces.redact import (
 # ============================================================
 # cache
 # ============================================================
-from llm_schema.namespaces.cache import CacheEvictedPayload, CacheHitPayload, CacheMissPayload
+from llm_toolkit_schema.namespaces.cache import CacheEvictedPayload, CacheHitPayload, CacheMissPayload
 
 # ============================================================
 # template
 # ============================================================
-from llm_schema.namespaces.template import (
+from llm_toolkit_schema.namespaces.template import (
     TemplateRenderedPayload,
     TemplateValidationFailedPayload,
     VariableMissingPayload,
@@ -83,7 +83,7 @@ from llm_schema.namespaces.template import (
 # ============================================================
 # fence
 # ============================================================
-from llm_schema.namespaces.fence import (
+from llm_toolkit_schema.namespaces.fence import (
     FenceValidationFailedPayload,
     RetryTriggeredPayload,
     ValidationPassedPayload,
@@ -92,7 +92,7 @@ from llm_schema.namespaces.fence import (
 # ============================================================
 # Also verify top-level namespace re-exports work
 # ============================================================
-import llm_schema.namespaces as ns_pkg
+import llm_toolkit_schema.namespaces as ns_pkg
 
 
 # ---------------------------------------------------------------------------
@@ -1176,7 +1176,7 @@ class TestRetryTriggeredPayload:
 
 
 class TestNamespacePackageReexports:
-    """Ensure all 29 payload classes are accessible from llm_schema.namespaces."""
+    """Ensure all 29 payload classes are accessible from llm_toolkit_schema.namespaces."""
 
     _CLASSES = [
         "CacheHitPayload",
@@ -1211,11 +1211,11 @@ class TestNamespacePackageReexports:
 
     def test_all_classes_accessible(self):
         for name in self._CLASSES:
-            assert hasattr(ns_pkg, name), f"llm_schema.namespaces is missing {name}"
+            assert hasattr(ns_pkg, name), f"llm_toolkit_schema.namespaces is missing {name}"
 
     def test_all_in_all(self):
         for name in self._CLASSES:
-            assert name in ns_pkg.__all__, f"{name} not in llm_schema.namespaces.__all__"
+            assert name in ns_pkg.__all__, f"{name} not in llm_toolkit_schema.namespaces.__all__"
 
 
 # ===========================================================================
@@ -1227,13 +1227,13 @@ class TestTopLevelReexports:
     """Spot-check that Phase 5 classes appear at the package root."""
 
     def test_span_completed_accessible(self):
-        import llm_schema
-        assert hasattr(llm_schema, "SpanCompletedPayload")
+        import llm_toolkit_schema
+        assert hasattr(llm_toolkit_schema, "SpanCompletedPayload")
 
     def test_validate_event_accessible(self):
-        import llm_schema
-        assert hasattr(llm_schema, "validate_event")
+        import llm_toolkit_schema
+        assert hasattr(llm_toolkit_schema, "validate_event")
 
     def test_version(self):
-        import llm_schema
-        assert llm_schema.__version__ == "1.0.0"
+        import llm_toolkit_schema
+        assert llm_toolkit_schema.__version__ == "1.0.0"

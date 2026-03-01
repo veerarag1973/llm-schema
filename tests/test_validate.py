@@ -1,4 +1,4 @@
-"""Tests for llm_schema.validate — Event envelope JSON Schema validation.
+"""Tests for llm_toolkit_schema.validate — Event envelope JSON Schema validation.
 
 Coverage targets
 ----------------
@@ -25,10 +25,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from llm_schema.event import Event, Tags
-from llm_schema.exceptions import SchemaValidationError
-from llm_schema.types import EventType
-from llm_schema.validate import _stdlib_validate, load_schema, validate_event
+from llm_toolkit_schema.event import Event, Tags
+from llm_toolkit_schema.exceptions import SchemaValidationError
+from llm_toolkit_schema.types import EventType
+from llm_toolkit_schema.validate import _stdlib_validate, load_schema, validate_event
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ class TestLoadSchema:
     def test_has_id(self):
         schema = load_schema()
         assert "$id" in schema
-        assert "llm-schema" in schema["$id"]
+        assert "llm-toolkit-schema" in schema["$id"]
 
     def test_required_fields_in_schema(self):
         schema = load_schema()
@@ -93,7 +93,7 @@ class TestLoadSchema:
 
     def test_missing_schema_raises_file_not_found(self, tmp_path, monkeypatch):
         """Point schema path at a non-existent file; expect FileNotFoundError."""
-        import llm_schema.validate as v_module
+        import llm_toolkit_schema.validate as v_module
 
         original_path = v_module._SCHEMA_PATH
         original_cache = v_module._CACHED_SCHEMA
@@ -370,7 +370,7 @@ class TestValidateSignedEvent:
         # Simulate signing fields manually.
         doc["checksum"] = "a" * 64
         doc["signature"] = "b" * 64
-        from llm_schema.ulid import generate as _gen
+        from llm_toolkit_schema.ulid import generate as _gen
         doc["prev_id"] = _gen()
 
         _stdlib_validate(doc)  # must not raise
@@ -410,7 +410,7 @@ class TestStdlibValidateBranchCoverage:
             _stdlib_validate(doc)
 
     def test_valid_prev_id_passes(self):
-        from llm_schema.ulid import generate as _gen
+        from llm_toolkit_schema.ulid import generate as _gen
         doc = _minimal_event().to_dict()
         doc["prev_id"] = _gen()
         _stdlib_validate(doc)
